@@ -1,0 +1,109 @@
+{
+  "updated_at": "2026-08-29T22:10:40.908296",
+  "strategies": [
+    {
+      "id": 1,
+      "name": "Core Alpha Flagship",
+      "target": "target (705 features)",
+      "neut": "25% Factor Neutralization",
+      "corr": "+0.0227",
+      "sharpe": "1.013",
+      "ann_sharpe": "3.508",
+      "dd": "17.78%",
+      "badge": "Flagship",
+      "color": "#3b82f6"
+    },
+    {
+      "id": 2,
+      "name": "Fundamental Alpha Specialist",
+      "target": "target_jeremy_20 (186 features)",
+      "neut": "35% Factor Neutralization",
+      "corr": "+0.0107",
+      "sharpe": "0.562",
+      "ann_sharpe": "1.948",
+      "dd": "26.59%",
+      "badge": "Fundamental",
+      "color": "#10b981"
+    },
+    {
+      "id": 3,
+      "name": "Momentum Alpha Specialist",
+      "target": "target_victor_20 (133 features)",
+      "neut": "40% Factor Neutralization",
+      "corr": "+0.0144",
+      "sharpe": "0.825",
+      "ann_sharpe": "2.859",
+      "dd": "16.40%",
+      "badge": "Momentum",
+      "color": "#8b5cf6"
+    },
+    {
+      "id": 4,
+      "name": "Macro Regime Specialist",
+      "target": "target_xerxes_20 (278 features)",
+      "neut": "45% Factor Neutralization",
+      "corr": "+0.0157",
+      "sharpe": "0.819",
+      "ann_sharpe": "2.838",
+      "dd": "38.04%",
+      "badge": "Macro Regime",
+      "color": "#f59e0b"
+    },
+    {
+      "id": 5,
+      "name": "Constitution Residual Specialist",
+      "target": "target_delta_20 (155 features)",
+      "neut": "50% Factor Neutralization",
+      "corr": "+0.0104",
+      "sharpe": "0.629",
+      "ann_sharpe": "2.180",
+      "dd": "26.11%",
+      "badge": "Residual",
+      "color": "#ec4899"
+    }
+  ],
+  "correlation_matrix": [
+    [
+      1.0,
+      0.474,
+      0.492,
+      0.48,
+      0.363
+    ],
+    [
+      0.474,
+      1.0,
+      0.169,
+      0.176,
+      0.14
+    ],
+    [
+      0.492,
+      0.169,
+      1.0,
+      0.263,
+      0.357
+    ],
+    [
+      0.48,
+      0.176,
+      0.263,
+      1.0,
+      0.279
+    ],
+    [
+      0.363,
+      0.14,
+      0.357,
+      0.279,
+      1.0
+    ]
+  ],
+  "strategy_names": [
+    "Strat 1 (Flagship)",
+    "Strat 2 (Fundamental)",
+    "Strat 3 (Momentum)",
+    "Strat 4 (Macro Regime)",
+    "Strat 5 (Residual)"
+  ]
+}
