@@ -44,11 +44,12 @@ def neutralize(
         transformed = rank_01(col_values) - 0.5
 
         if neutralizers_matrix is not None and neutralizers_matrix.shape[1] > 0:
-            # Linear least squares projection
-            # preds_neutral = preds - proportion * X @ (X^T X)^-1 X^T @ preds
-            x = neutralizers_matrix - neutralizers_matrix.mean(axis=0)
-            norm_x = x / (np.linalg.norm(x, axis=0) + 1e-8)
-            projection = norm_x @ (norm_x.T @ transformed)
+            # Clean NaNs in features and zero-center
+            X = np.nan_to_num(neutralizers_matrix, nan=0.5)
+            X = X - X.mean(axis=0)
+            # Exact Linear Least Squares Projection: P_neutral = P - alpha * X (X^T X)^-1 X^T P
+            beta = np.linalg.lstsq(X, transformed, rcond=1e-5)[0]
+            projection = X.dot(beta)
             neutralized_values = transformed - proportion * projection
         else:
             neutralized_values = transformed

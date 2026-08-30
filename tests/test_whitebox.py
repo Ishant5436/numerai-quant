@@ -111,3 +111,22 @@ def test_whitebox_neutralize_collinear_features_stability():
     assert not res["pred"].isna().any()
     assert np.all(res["pred"].values >= 0.0)
     assert np.all(res["pred"].values <= 1.0)
+
+
+def test_whitebox_neutralize_nan_features_resilience():
+    """White-box: feature columns containing NaNs must not corrupt predictions into NaNs."""
+    np.random.seed(42)
+    n = 100
+    feat_with_nans = np.random.randn(n)
+    feat_with_nans[10:20] = np.nan
+    feat_with_nans[50:60] = np.nan
+
+    df = pd.DataFrame({
+        "pred": np.random.uniform(0, 1, n),
+        "feat_nan": feat_with_nans,
+        "feat_clean": np.random.randn(n),
+    })
+    res = neutralize(df, ["pred"], extra_neutralizers=["feat_nan", "feat_clean"], proportion=0.5)
+    assert not res["pred"].isna().any(), "Predictions must contain ZERO NaNs even when features contain NaNs"
+    assert np.all(res["pred"].values >= 0.0)
+    assert np.all(res["pred"].values <= 1.0)
