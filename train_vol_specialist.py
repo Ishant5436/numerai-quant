@@ -105,13 +105,13 @@ def main():
     max_dd = (corrs_neutral.cumsum().cummax() - corrs_neutral.cumsum()).max()
 
     print("\n" + "="*60)
-    print(f"🛡️  VOLATILITY / MMC SPECIALIST AUDIT SUMMARY")
+    print(f"[GUARD]   VOLATILITY / MMC SPECIALIST AUDIT SUMMARY")
     print("="*60)
     print(f"• Mean Era Correlation (Corr20v2) : {mean_neut:.4f}")
     print(f"• Raw Per-Era Sharpe (μ/σ)        : {sharpe_neut:.3f}")
     print(f"• Peak-to-Trough Max Drawdown     : {max_dd:.4f} ({max_dd*100:.2f}%)")
     print("="*60)
-    print("✅ Volatility Specialist successfully trained!")
+    print("[SUCCESS]  Volatility Specialist successfully trained!")
 
 
 if __name__ == "__main__":

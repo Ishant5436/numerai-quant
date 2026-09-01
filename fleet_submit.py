@@ -123,9 +123,9 @@ def main():
 
         print(f"Uploading submission to Numerai (Model ID: {model_id})...")
         sub_id = napi.upload_predictions(preds_path, model_id=model_id)
-        print(f"✅ Successfully submitted '{model_name}' to Round {current_round}! Submission ID: {sub_id}")
+        print(f"[SUCCESS]  Successfully submitted '{model_name}' to Round {current_round}! Submission ID: {sub_id}")
 
-    print(f"\n🎉 Fleet submission complete across all {len(models)} models for Round {current_round}!")
+    print(f"\n[COMPLETE]  Fleet submission complete across all {len(models)} models for Round {current_round}!")
 
 
 if __name__ == "__main__":

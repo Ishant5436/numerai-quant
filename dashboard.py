@@ -164,7 +164,7 @@ def render_html(account_info: dict, current_round: int) -> str:
 <body>
     <div class="header">
         <div>
-            <h1>⚡ Numerai 5-Strategy Quant Fleet Dashboard</h1>
+            <h1>[SIMULATE]  Numerai 5-Strategy Quant Fleet Dashboard</h1>
             <p style="color: #64748b; font-size: 13px; margin-top: 4px;">v5.0 Dataset • 705 Medium Features • Last Audited: {last_updated}</p>
         </div>
         <div>
@@ -172,12 +172,12 @@ def render_html(account_info: dict, current_round: int) -> str:
         </div>
     </div>
 
-    <div class="section-title">🏆 5-Strategy Fleet Topology & Dynamic Performance Metrics</div>
+    <div class="section-title">[BENCHMARK]  5-Strategy Fleet Topology & Dynamic Performance Metrics</div>
     <div class="grid">
         {cards_html}
     </div>
 
-    <div class="section-title">🔗 Pairwise Spearman Correlation Matrix (Orthogonality Audit)</div>
+    <div class="section-title">[MATRIX]  Pairwise Spearman Correlation Matrix (Orthogonality Audit)</div>
     <table class="matrix-table">
         <thead>
             <tr>
@@ -224,5 +224,5 @@ async def homepage(request):
 app = Starlette(routes=[Route("/", homepage)])
 
 if __name__ == "__main__":
-    print("🚀 Starting Numerai Fleet Dashboard on http://127.0.0.1:8501 ...")
+    print("[EXECUTE]  Starting Numerai Fleet Dashboard on http://127.0.0.1:8501 ...")
     uvicorn.run(app, host="127.0.0.1", port=8501, log_level="warning")

@@ -111,7 +111,7 @@ def main():
     corrs_ensemble = calculate_era_correlation(val_df, "ensemble_raw", "target")
     mean_ens = corrs_ensemble.mean()
     raw_sharpe_ens = mean_ens / (corrs_ensemble.std() + 1e-8)
-    print(f"\n🏆 Blended Ensemble (Raw)       -> Mean Corr: {mean_ens:.4f} | Per-Era Sharpe: {raw_sharpe_ens:.3f}")
+    print(f"\n[BENCHMARK]  Blended Ensemble (Raw)       -> Mean Corr: {mean_ens:.4f} | Per-Era Sharpe: {raw_sharpe_ens:.3f}")
 
     # 5. Apply Feature Neutralization
     print(f"Applying {int(NEUTRALIZATION_PROPORTION*100)}% feature neutralization...")
@@ -131,14 +131,14 @@ def main():
     max_dd = (corrs_neutral.cumsum().cummax() - corrs_neutral.cumsum()).max()
 
     print("\n" + "="*60)
-    print(f"🛡️  NEUTRALIZED ALPHA ENSEMBLE AUDIT SUMMARY")
+    print(f"[GUARD]   NEUTRALIZED ALPHA ENSEMBLE AUDIT SUMMARY")
     print("="*60)
     print(f"• Mean Era Correlation (Corr20v2) : {mean_neut:.4f}")
     print(f"• Raw Per-Era Sharpe (μ/σ)        : {raw_sharpe_neut:.3f} (Leaderboard Standard)")
     print(f"• Annualized Sharpe (Monthly √12) : {annualized_monthly:.2f}")
     print(f"• Peak-to-Trough Max Drawdown     : {max_dd:.4f} ({max_dd*100:.2f}%)")
     print("="*60)
-    print("✅ Alpha Ensemble successfully verified and standardized!")
+    print("[SUCCESS]  Alpha Ensemble successfully verified and standardized!")
 
 
 if __name__ == "__main__":

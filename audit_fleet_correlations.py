@@ -34,17 +34,17 @@ def main():
     val_path = os.path.join(DATA_DIR, "validation.parquet")
 
     print("=" * 75)
-    print("🔬 NUMERAI 5-STRATEGY FLEET PERFORMANCE & DYNAMIC METRICS AUDIT")
+    print("[RESEARCH]  NUMERAI 5-STRATEGY FLEET PERFORMANCE & DYNAMIC METRICS AUDIT")
     print("=" * 75)
 
     val_cols = ["era", "target"] + features
-    print("📥 Loading validation dataset (4.12M rows)...")
+    print("[LOAD]  Loading validation dataset (4.12M rows)...")
     val_df = pd.read_parquet(val_path, columns=val_cols)
     X_val = val_df[features]
     neutralizer_feats = features[:60]
 
     # Strategy 1: Core Alpha Ensemble (25% Neutralized)
-    print("📊 Computing Strategy 1: Core Alpha Ensemble...")
+    print("[AUDIT]  Computing Strategy 1: Core Alpha Ensemble...")
     s1_files = sorted(glob.glob(os.path.join(MODEL_DIR, "lgb_*.pkl")))
     s1_preds = [rank_01(joblib.load(f).predict(X_val)) for f in s1_files]
     val_df["s1_raw"] = pd.DataFrame(s1_preds).T.mean(axis=1).values
@@ -54,7 +54,7 @@ def main():
     )
 
     # Strategy 2: Tail-Risk Volatility Specialist (50% Neutralized)
-    print("📊 Computing Strategy 2: Tail-Risk Volatility Specialist...")
+    print("[AUDIT]  Computing Strategy 2: Tail-Risk Volatility Specialist...")
     s2_files = sorted(glob.glob(os.path.join(VOL_DIR, "lgb_*.pkl")))
     s2_preds = [rank_01(joblib.load(f).predict(X_val)) for f in s2_files]
     val_df["s2_raw"] = pd.DataFrame(s2_preds).T.mean(axis=1).values
@@ -64,7 +64,7 @@ def main():
     )
 
     # Strategy 3: Quality Momentum Specialist (35% Neutralized)
-    print("📊 Computing Strategy 3: Quality Momentum Specialist...")
+    print("[AUDIT]  Computing Strategy 3: Quality Momentum Specialist...")
     s3_files = sorted(glob.glob(os.path.join(ALPHA_DIR, "lgb_*.pkl")))
     s3_preds = [rank_01(joblib.load(f).predict(X_val)) for f in s3_files]
     val_df["s3_raw"] = pd.DataFrame(s3_preds).T.mean(axis=1).values
@@ -74,7 +74,7 @@ def main():
     )
 
     # Strategy 4: Pure Tail-Risk (target_xerxes_20) (40% Neutralized)
-    print("📊 Computing Strategy 4: Pure Tail-Risk (xerxes_20)...")
+    print("[AUDIT]  Computing Strategy 4: Pure Tail-Risk (xerxes_20)...")
     s4_model = joblib.load(os.path.join(TAIL_DIR, "lgb_target_xerxes_20.pkl"))
     val_df["s4_raw"] = s4_model.predict(X_val)
     val_df["s4_raw"] = val_df.groupby("era", observed=True)["s4_raw"].rank(pct=True)
@@ -83,7 +83,7 @@ def main():
     )
 
     # Strategy 5: Pure Residual (target_delta_20) (40% Neutralized)
-    print("📊 Computing Strategy 5: Pure Residual (delta_20)...")
+    print("[AUDIT]  Computing Strategy 5: Pure Residual (delta_20)...")
     s5_model = joblib.load(os.path.join(RESIDUAL_DIR, "lgb_target_delta_20.pkl"))
     val_df["s5_raw"] = s5_model.predict(X_val)
     val_df["s5_raw"] = val_df.groupby("era", observed=True)["s5_raw"].rank(pct=True)
@@ -131,14 +131,14 @@ def main():
 
     with open(METRICS_JSON, "w") as f:
         json.dump(output_payload, f, indent=2)
-    print(f"\n💾 Dynamically saved live performance snapshot to {METRICS_JSON}")
+    print(f"\n[SAVE]  Dynamically saved live performance snapshot to {METRICS_JSON}")
 
     print("\n" + "=" * 75)
-    print("🏆 5-STRATEGY OUT-OF-SAMPLE PERFORMANCE BENCHMARK")
+    print("[BENCHMARK]  5-STRATEGY OUT-OF-SAMPLE PERFORMANCE BENCHMARK")
     print("=" * 75)
     print(pd.DataFrame(metrics_list)[["name", "corr", "sharpe", "ann_sharpe", "dd"]].to_string(index=False))
     print("\n" + "=" * 75)
-    print("🔗 PAIRWISE CROSS-STRATEGY CORRELATION MATRIX")
+    print("[MATRIX]  PAIRWISE CROSS-STRATEGY CORRELATION MATRIX")
     print("=" * 75)
     print(corr_df.to_string())
 

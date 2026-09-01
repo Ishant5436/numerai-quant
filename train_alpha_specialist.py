@@ -47,7 +47,7 @@ def calculate_era_correlation(df: pd.DataFrame, pred_col: str, target_col: str =
 def main():
     features = get_feature_list()
     print("=" * 65)
-    print("🚀 TRAINING NUMERAI STRATEGY 3: QUALITY MOMENTUM & RESIDUAL ALPHA")
+    print("[EXECUTE]  TRAINING NUMERAI STRATEGY 3: QUALITY MOMENTUM & RESIDUAL ALPHA")
     print("=" * 65)
     print(f"Features: {len(features)} medium features | Targets: {ALPHA_TARGETS}")
     print(f"Neutralization Proportion: {ALPHA_NEUTRALIZATION * 100:.0f}%")
@@ -56,26 +56,26 @@ def main():
     val_path = os.path.join(DATA_DIR, "validation.parquet")
 
     cols_to_load = ["era"] + ALPHA_TARGETS + features
-    print("\n📥 Loading training dataset...")
+    print("\n[LOAD]  Loading training dataset...")
     train_df = pd.read_parquet(train_path, columns=cols_to_load)
     X_train = train_df[features]
 
     models = {}
     for target in ALPHA_TARGETS:
         model_file = os.path.join(ALPHA_MODEL_DIR, f"lgb_{target}.pkl")
-        print(f"\n🧠 Training LightGBM Booster on '{target}'...")
+        print(f"\n[TRAIN]  Training LightGBM Booster on '{target}'...")
         y_train = train_df[target]
         model = lgb.LGBMRegressor(**LGB_PARAMS)
         model.fit(X_train, y_train)
         joblib.dump(model, model_file)
         models[target] = model
-        print(f"💾 Saved: {model_file}")
+        print(f"[SAVE]  Saved: {model_file}")
 
     del train_df, X_train
 
     # Validation Phase
     val_cols = ["era", "target"] + features
-    print("\n📈 Evaluating out-of-sample on validation eras...")
+    print("\n[METRICS]  Evaluating out-of-sample on validation eras...")
     val_df = pd.read_parquet(val_path, columns=val_cols)
     X_val = val_df[features]
 
@@ -92,7 +92,7 @@ def main():
     val_df["alpha_raw"] = val_df.groupby("era", observed=True)["alpha_raw"].rank(pct=True)
 
     # 35% Feature Neutralization
-    print(f"\n🛡️ Applying {int(ALPHA_NEUTRALIZATION*100)}% feature neutralization for idiosyncratic alpha...")
+    print(f"\n[GUARD]  Applying {int(ALPHA_NEUTRALIZATION*100)}% feature neutralization for idiosyncratic alpha...")
     neutralizer_feats = features[:60]
     val_df["alpha_neutralized"] = val_df.groupby("era", observed=True, group_keys=False).apply(
         lambda era: pd.Series(
@@ -107,14 +107,14 @@ def main():
     max_dd = (corrs_neutral.cumsum().cummax() - corrs_neutral.cumsum()).max()
 
     print("\n" + "=" * 65)
-    print("📊 STRATEGY 3 OUT-OF-SAMPLE AUDIT SUMMARY")
+    print("[AUDIT]  STRATEGY 3 OUT-OF-SAMPLE AUDIT SUMMARY")
     print("=" * 65)
     print(f"• Mean Era Correlation (Corr20v2) : +{mean_neut:.4f}")
     print(f"• Raw Per-Era Sharpe (μ/σ)        : {sharpe_neut:.3f}")
     print(f"• Annualized Sharpe (x √12)       : {sharpe_neut * np.sqrt(12):.3f}")
     print(f"• Peak-to-Trough Max Drawdown     : {max_dd:.4f} ({max_dd * 100:.2f}%)")
     print("=" * 65)
-    print("✅ Quality Momentum Strategy successfully trained and validated!\n")
+    print("[SUCCESS]  Quality Momentum Strategy successfully trained and validated!\n")
 
 
 if __name__ == "__main__":

@@ -54,14 +54,14 @@ def calculate_era_correlation(df: pd.DataFrame, pred_col: str, target_col: str =
 def main():
     groups = load_feature_groups()
     print("=" * 80)
-    print("🧠 NUMERAI TRI-ALGORITHM (LGBM + XGBOOST + CATBOOST) STACKING ENGINE")
+    print("[TRAIN]  NUMERAI TRI-ALGORITHM (LGBM + XGBOOST + CATBOOST) STACKING ENGINE")
     print("=" * 80)
 
     train_path = os.path.join(DATA_DIR, "train.parquet")
     val_path = os.path.join(DATA_DIR, "validation.parquet")
 
     cols_to_load = ["era", "target", "target_victor_20", "target_xerxes_20", "target_jeremy_20", "target_delta_20"] + groups["all_medium"]
-    print("\n📥 Loading train & validation datasets...")
+    print("\n[LOAD]  Loading train & validation datasets...")
     train_df = pd.read_parquet(train_path, columns=cols_to_load)
     val_df = pd.read_parquet(val_path, columns=["era", "target"] + groups["all_medium"])
 
@@ -113,7 +113,7 @@ def main():
     neutralizer_feats = groups["all_medium"][:60]
 
     for cfg in configs:
-        print(f"\n⚡ Training Strategy {cfg['id']} [{cfg['name']}] on {len(cfg['features'])} features (Target: {cfg['target']})...")
+        print(f"\n[SIMULATE]  Training Strategy {cfg['id']} [{cfg['name']}] on {len(cfg['features'])} features (Target: {cfg['target']})...")
         valid_mask = ~train_df[cfg["target"]].isna()
         X_train = train_df.loc[valid_mask, cfg["features"]]
         y_train = train_df.loc[valid_mask, cfg["target"]]
@@ -176,17 +176,17 @@ def main():
         })
 
     print("\n" + "=" * 80)
-    print("🏆 TRI-ALGORITHM ENSEMBLE BENCHMARK RESULTS")
+    print("[BENCHMARK]  TRI-ALGORITHM ENSEMBLE BENCHMARK RESULTS")
     print("=" * 80)
     print(pd.DataFrame(benchmark_metrics).to_string(index=False))
 
     corr_matrix = val_df[strategy_pred_cols].corr(method="spearman").round(3)
     print("\n" + "=" * 80)
-    print("🔗 PAIRWISE CROSS-STRATEGY CORRELATION MATRIX")
+    print("[MATRIX]  PAIRWISE CROSS-STRATEGY CORRELATION MATRIX")
     print("=" * 80)
     print(corr_matrix.to_string())
 
-    print("\n✅ All 15 models (3 algorithms x 5 strategies) successfully trained and saved!")
+    print("\n[SUCCESS]  All 15 models (3 algorithms x 5 strategies) successfully trained and saved!")
 
 if __name__ == "__main__":
     main()

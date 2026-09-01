@@ -103,15 +103,15 @@ def main():
         "prediction": final_preds
     })
     submission_df.to_csv(preds_path, index=False)
-    print(f"✅ Generated {len(submission_df)} neutralized ensemble predictions -> {preds_path}")
+    print(f"[SUCCESS]  Generated {len(submission_df)} neutralized ensemble predictions -> {preds_path}")
 
     # Submit
     if public_id and secret_key:
         print(f"Uploading Alpha Ensemble submission to Numerai (Model ID: {model_id})...")
         submission_id = napi.upload_predictions(preds_path, model_id=model_id)
-        print(f"🚀 Successfully submitted Alpha Ensemble to Round {current_round}! Submission ID: {submission_id}")
+        print(f"[EXECUTE]  Successfully submitted Alpha Ensemble to Round {current_round}! Submission ID: {submission_id}")
     else:
-        print("\n⚠️ API keys not found in environment.")
+        print("\n[WARN]  API keys not found in environment.")
 
 
 if __name__ == "__main__":
