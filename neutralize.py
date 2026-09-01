@@ -28,7 +28,9 @@ def neutralize(
     proportion: float = 0.25
 ) -> pd.DataFrame:
     """
-    Linearly project predictions away from feature space per era/group.
+    Numerically Stable QR-Decomposition Linear Feature Neutralization.
+    Projects prediction vectors away from the subspace spanned by risk factor matrix X.
+    Invariant: For orthonormal Q (from X = QR), Projection = Q @ (Q.T @ P), O(N*K) time, 0 matrix inversion instability.
     """
     if proportion <= 0.0:
         return df
@@ -38,22 +40,27 @@ def neutralize(
 
     df_neutralized = df.copy()
 
-    for col in columns:
-        col_values = df[col].values
-        # Rank to standard Gaussian / uniform before projection
-        transformed = rank_01(col_values) - 0.5
+    if neutralizers_matrix is not None and neutralizers_matrix.shape[1] > 0:
+        # 1. Clean and zero-center feature matrix
+        X = np.nan_to_num(neutralizers_matrix, nan=0.5)
+        X = X - X.mean(axis=0)
 
-        if neutralizers_matrix is not None and neutralizers_matrix.shape[1] > 0:
-            # Clean NaNs in features and zero-center
-            X = np.nan_to_num(neutralizers_matrix, nan=0.5)
-            X = X - X.mean(axis=0)
-            # Exact Linear Least Squares Projection: P_neutral = P - alpha * X (X^T X)^-1 X^T P
-            beta = np.linalg.lstsq(X, transformed, rcond=1e-5)[0]
-            projection = X.dot(beta)
-            neutralized_values = transformed - proportion * projection
-        else:
-            neutralized_values = transformed
+        # 2. Economy-size QR decomposition: X = Q @ R
+        # Q is an N x K matrix with orthonormal columns: Q^T @ Q = I_K
+        Q, _ = np.linalg.qr(X, mode="reduced")
 
-        df_neutralized[col] = rank_01(neutralized_values)
+        for col in columns:
+            col_values = df[col].values
+            # Zero-centered rank uniform [-0.5, 0.5]
+            P = rank_01(col_values) - 0.5
+
+            # Orthogonal projection: Proj_X(P) = Q @ (Q^T @ P)
+            projection = Q @ (Q.T @ P)
+            neutralized_values = P - proportion * projection
+            df_neutralized[col] = rank_01(neutralized_values)
+    else:
+        for col in columns:
+            df_neutralized[col] = rank_01(df[col].values)
 
     return df_neutralized
+
