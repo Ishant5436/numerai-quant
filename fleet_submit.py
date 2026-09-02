@@ -20,9 +20,9 @@ from config import FEATURES_JSON, DATA_DIR
 from neutralize import neutralize, rank_01
 
 load_dotenv(os.path.expanduser("~/.env"))
-os.makedirs(DATA_DIR, exist_ok=True)
-TRI_DIR = "/Users/ishantpanchal/numerai-quant/models/tri_ensemble_fleet"
-ORTHO_DIR = "/Users/ishantpanchal/numerai-quant/models/orthogonal_fleet"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TRI_DIR = os.path.join(BASE_DIR, "models", "tri_ensemble_fleet")
+ORTHO_DIR = os.path.join(BASE_DIR, "models", "orthogonal_fleet")
 
 
 def load_feature_groups() -> dict:
