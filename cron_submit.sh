@@ -16,6 +16,9 @@ SUCCESS=false
 
 for attempt in $(seq 1 $MAX_RETRIES); do
     echo "▶ Attempt $attempt of $MAX_RETRIES..." >> "$LOG_FILE"
+    echo "▶ Generating Signals v3 Supernova predictions..." >> "$LOG_FILE"
+    $PYTHON_BIN signals/signals_pipeline.py >> "$LOG_FILE" 2>&1 || true
+
     if $PYTHON_BIN $SCRIPT_PATH >> "$LOG_FILE" 2>&1; then
         echo "✅ [$(date '+%Y-%m-%d %H:%M:%S')] Fleet submission completed successfully!" >> "$LOG_FILE"
         SUCCESS=true
