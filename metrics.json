@@ -1,109 +1,109 @@
 {
-  "updated_at": "2026-08-29T22:10:40.908296",
+  "updated_at": "2026-09-03T03:34:50.643575",
   "strategies": [
     {
       "id": 1,
-      "name": "Core Alpha Flagship",
-      "target": "target (705 features)",
-      "neut": "25% Factor Neutralization",
-      "corr": "+0.0227",
-      "sharpe": "1.013",
-      "ann_sharpe": "3.508",
-      "dd": "17.78%",
+      "name": "Core Alpha Ensemble",
+      "target": "target (4-Target Blend: Cyrus, Agnes, Victor, Jeremy)",
+      "neut": "25% Linear Feature Neutralization",
       "badge": "Flagship",
-      "color": "#3b82f6"
+      "color": "#3b82f6",
+      "corr": "+0.0212",
+      "sharpe": "0.917",
+      "ann_sharpe": "3.177",
+      "dd": "24.72%"
     },
     {
       "id": 2,
-      "name": "Fundamental Alpha Specialist",
-      "target": "target_jeremy_20 (186 features)",
-      "neut": "35% Factor Neutralization",
-      "corr": "+0.0107",
-      "sharpe": "0.562",
-      "ann_sharpe": "1.948",
-      "dd": "26.59%",
-      "badge": "Fundamental",
-      "color": "#10b981"
+      "name": "Tail-Risk Volatility Specialist",
+      "target": "victor_20 + xerxes_20 + delta_20",
+      "neut": "50% Heavy Feature Neutralization",
+      "badge": "High MMC",
+      "color": "#10b981",
+      "corr": "+0.0220",
+      "sharpe": "0.987",
+      "ann_sharpe": "3.418",
+      "dd": "14.74%"
     },
     {
       "id": 3,
-      "name": "Momentum Alpha Specialist",
-      "target": "target_victor_20 (133 features)",
-      "neut": "40% Factor Neutralization",
-      "corr": "+0.0144",
-      "sharpe": "0.825",
-      "ann_sharpe": "2.859",
-      "dd": "16.40%",
-      "badge": "Momentum",
-      "color": "#8b5cf6"
+      "name": "Quality Momentum Specialist",
+      "target": "target_jeremy_20 + target_agnes_20",
+      "neut": "35% Balanced Feature Neutralization",
+      "badge": "Orthogonal",
+      "color": "#8b5cf6",
+      "corr": "+0.0169",
+      "sharpe": "0.775",
+      "ann_sharpe": "2.686",
+      "dd": "31.10%"
     },
     {
       "id": 4,
-      "name": "Macro Regime Specialist",
-      "target": "target_xerxes_20 (278 features)",
-      "neut": "45% Factor Neutralization",
-      "corr": "+0.0157",
-      "sharpe": "0.819",
-      "ann_sharpe": "2.838",
-      "dd": "38.04%",
-      "badge": "Macro Regime",
-      "color": "#f59e0b"
+      "name": "Pure Tail-Risk Specialist",
+      "target": "target_xerxes_20 (Tail Volatility)",
+      "neut": "40% Factor Neutralization",
+      "badge": "Min Drawdown",
+      "color": "#f59e0b",
+      "corr": "+0.0218",
+      "sharpe": "0.978",
+      "ann_sharpe": "3.387",
+      "dd": "15.54%"
     },
     {
       "id": 5,
-      "name": "Constitution Residual Specialist",
-      "target": "target_delta_20 (155 features)",
-      "neut": "50% Factor Neutralization",
-      "corr": "+0.0104",
-      "sharpe": "0.629",
-      "ann_sharpe": "2.180",
-      "dd": "26.11%",
-      "badge": "Residual",
-      "color": "#ec4899"
+      "name": "Pure Residual Specialist",
+      "target": "target_delta_20 (Uncorrelated Residuals)",
+      "neut": "40% Factor Neutralization",
+      "badge": "Residual Alpha",
+      "color": "#ec4899",
+      "corr": "+0.0177",
+      "sharpe": "0.872",
+      "ann_sharpe": "3.019",
+      "dd": "15.51%"
     }
   ],
   "correlation_matrix": [
     [
       1.0,
-      0.474,
-      0.492,
-      0.48,
-      0.363
+      0.948,
+      0.924,
+      0.883,
+      0.834
     ],
     [
-      0.474,
+      0.948,
       1.0,
-      0.169,
-      0.176,
-      0.14
+      0.809,
+      0.922,
+      0.88
     ],
     [
-      0.492,
-      0.169,
+      0.924,
+      0.809,
       1.0,
-      0.263,
-      0.357
+      0.725,
+      0.811
     ],
     [
-      0.48,
-      0.176,
-      0.263,
+      0.883,
+      0.922,
+      0.725,
       1.0,
-      0.279
+      0.741
     ],
     [
-      0.363,
-      0.14,
-      0.357,
-      0.279,
+      0.834,
+      0.88,
+      0.811,
+      0.741,
       1.0
     ]
   ],
   "strategy_names": [
-    "Strat 1 (Flagship)",
-    "Strat 2 (Fundamental)",
-    "Strat 3 (Momentum)",
-    "Strat 4 (Macro Regime)",
+    "Strat 1 (Core)",
+    "Strat 2 (Vol)",
+    "Strat 3 (Quality)",
+    "Strat 4 (Tail)",
     "Strat 5 (Residual)"
   ]
 }
