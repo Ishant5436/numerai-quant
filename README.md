@@ -3,7 +3,7 @@
 > **Statistically Independent, Multi-Factor Machine Learning Fleet for Numerai Tournament v5.0 & Signals v3 Supernova**  
 > *Optimized for Apple Silicon ARM64 (M5 Pro) with Sub-Factor Mining & Linear Feature Neutralization*
 
-[![Tests](https://img.shields.io/badge/Tests-22%2F22%20Passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-23%2F23%20Passed-brightgreen)](tests/)
 [![Tournament](https://img.shields.io/badge/Tournament-v5.0%20Ender%2060D-blue)](config.py)
 [![Signals](https://img.shields.io/badge/Signals-v3%20Supernova-purple)](signals/)
 [![Linear Algebra](https://img.shields.io/badge/Linear%20Algebra-QR%20Decomposition-orange)](neutralize.py)

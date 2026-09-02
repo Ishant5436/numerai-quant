@@ -60,9 +60,9 @@ def test_blackbox_prediction_generation_bounds():
 
     neutralizer_feats = medium_feats[:30]
 
-    # Test Strategy 1 (Core Flagship)
+    # Test Strategy 1 (Core Flagship) with explicit test fallback permitted
     preds = generate_tri_ensemble_prediction(
-        live_df, strat_id=1, feature_subset=groups["all_medium"], neut_proportion=0.25, neutralizer_feats=neutralizer_feats
+        live_df, strat_id=1, feature_subset=groups["all_medium"], neut_proportion=0.25, neutralizer_feats=neutralizer_feats, allow_mock_fallback=True
     )
 
     assert len(preds) == n_rows
@@ -71,6 +71,18 @@ def test_blackbox_prediction_generation_bounds():
     assert not np.isinf(preds).any(), "Predictions must contain ZERO Infs"
     assert np.all(preds >= 0.0)
     assert np.all(preds <= 1.0)
+
+
+def test_blackbox_production_fails_loudly_when_models_missing():
+    """Production guard: verify default allow_mock_fallback=False raises FileNotFoundError when weights missing."""
+    groups = load_feature_groups()
+    medium_feats = groups["all_medium"]
+    live_df = pd.DataFrame(np.zeros((5, len(medium_feats))), columns=medium_feats)
+    # Using non-existent strat_id 99999 to guarantee model files are absent
+    with pytest.raises(FileNotFoundError, match="Production Error: No model weights found"):
+        generate_tri_ensemble_prediction(
+            live_df, strat_id=99999, feature_subset=medium_feats, neut_proportion=0.25, neutralizer_feats=medium_feats[:10], allow_mock_fallback=False
+        )
 
 
 # ==============================================================================

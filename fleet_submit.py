@@ -46,7 +46,7 @@ def load_feature_groups() -> dict:
     return groups
 
 
-def generate_tri_ensemble_prediction(live_df: pd.DataFrame, strat_id: int, feature_subset: list, neut_proportion: float, neutralizer_feats: list) -> np.ndarray:
+def generate_tri_ensemble_prediction(live_df: pd.DataFrame, strat_id: int, feature_subset: list, neut_proportion: float, neutralizer_feats: list, allow_mock_fallback: bool = False) -> np.ndarray:
     lgb_path = os.path.join(TRI_DIR, f"lgb_strat_{strat_id}.pkl")
     xgb_path = os.path.join(TRI_DIR, f"xgb_strat_{strat_id}.pkl")
     cb_path = os.path.join(TRI_DIR, f"cb_strat_{strat_id}.pkl")
@@ -62,13 +62,19 @@ def generate_tri_ensemble_prediction(live_df: pd.DataFrame, strat_id: int, featu
 
         raw_pred = 0.40 * p_lgb + 0.30 * p_xgb + 0.30 * p_cb
     else:
-        # Fallback to single LightGBM or deterministic feature mean
+        # Fallback to single LightGBM
         single_path = os.path.join(ORTHO_DIR, f"lgb_strat_{strat_id}.pkl")
         if os.path.exists(single_path):
             model = joblib.load(single_path)
             raw_pred = model.predict(live_df[feature_subset])
-        else:
+        elif allow_mock_fallback:
+            # Explicitly restricted to synthetic test environments where weights are gitignored
             raw_pred = np.mean(live_df[feature_subset].values, axis=1)
+        else:
+            raise FileNotFoundError(
+                f"Production Error: No model weights found for strategy {strat_id} at {TRI_DIR} or {single_path}. "
+                "Refusing to degrade to untrained feature averages during live competition submission."
+            )
 
     live_copy = live_df.copy()
     live_copy["pred"] = rank_01(raw_pred)
