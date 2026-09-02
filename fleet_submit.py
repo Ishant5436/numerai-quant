@@ -62,9 +62,13 @@ def generate_tri_ensemble_prediction(live_df: pd.DataFrame, strat_id: int, featu
 
         raw_pred = 0.40 * p_lgb + 0.30 * p_xgb + 0.30 * p_cb
     else:
-        # Fallback to single LightGBM
-        model = joblib.load(os.path.join(ORTHO_DIR, f"lgb_strat_{strat_id}.pkl"))
-        raw_pred = model.predict(live_df[feature_subset])
+        # Fallback to single LightGBM or deterministic feature mean
+        single_path = os.path.join(ORTHO_DIR, f"lgb_strat_{strat_id}.pkl")
+        if os.path.exists(single_path):
+            model = joblib.load(single_path)
+            raw_pred = model.predict(live_df[feature_subset])
+        else:
+            raw_pred = np.mean(live_df[feature_subset].values, axis=1)
 
     live_copy = live_df.copy()
     live_copy["pred"] = rank_01(raw_pred)
