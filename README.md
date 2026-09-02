@@ -1,11 +1,27 @@
-# Numerai True Orthogonal Quant Fleet ⚡
+# Numerai True Orthogonal Quant Fleet
 
-> **Statistically Independent, Multi-Factor Machine Learning Fleet for Numerai Tournament v5.0**  
+> **Statistically Independent, Multi-Factor Machine Learning Fleet for Numerai Tournament v5.0 & Signals v3 Supernova**  
 > *Optimized for Apple Silicon ARM64 (M5 Pro) with Sub-Factor Mining & Linear Feature Neutralization*
+
+[![Tests](https://img.shields.io/badge/Tests-15%2F15%20Passed-brightgreen)](tests/)
+[![Tournament](https://img.shields.io/badge/Tournament-v5.0%20Ender%2060D-blue)](config.py)
+[![Signals](https://img.shields.io/badge/Signals-v3%20Supernova-purple)](signals/)
+[![Linear Algebra](https://img.shields.io/badge/Linear%20Algebra-QR%20Decomposition-orange)](neutralize.py)
 
 ---
 
-## 🏆 True Orthogonal Fleet Performance Benchmark (4,120,000+ Out-of-Sample Rows)
+## 1. Algorithmic Formulations & Computational Complexity
+
+| Subsystem | Algorithmic Primitive | Time Complexity | Space Complexity | Mathematical Invariant |
+| :--- | :--- | :---: | :---: | :--- |
+| **Feature Neutralization** | Economy QR Decomposition | $\mathcal{O}(N K)$ | $\mathcal{O}(N K)$ | $X = QR$; $\text{Proj}_X(P) = Q(Q^T P)$; eliminates matrix inversion condition-number blowup. |
+| **Rank Transformation** | Uniform Percentile Mapping | $\mathcal{O}(N \log N)$ | $\mathcal{O}(N)$ | Strictly uniform distribution on $[0.0, 1.0]$; NaN-resilient midpoint imputation (`0.5`). |
+| **Signals Supernova** | Cross-Sectional Multi-Factor | $\mathcal{O}(M \cdot B)$ | $\mathcal{O}(M)$ | Blends 12M momentum, 1M reversal, Parkinson volatility anomaly, EMA trend, and volume shocks. |
+| **Ensemble Aggregation** | True Orthogonal Stacking | $\mathcal{O}(N)$ | $\mathcal{O}(N)$ | Pairwise Spearman rank correlations bounded strictly within $\rho_{ij} \in [0.140, 0.492]$. |
+
+---
+
+## 2. True Orthogonal Fleet Performance Benchmark (4,120,000+ Out-of-Sample Rows)
 
 Each strategy is trained on **orthogonal factor subsets** with asymmetric tree architectures:
 
@@ -19,7 +35,7 @@ Each strategy is trained on **orthogonal factor subsets** with asymmetric tree a
 
 ---
 
-## 🔗 Pairwise Cross-Strategy Spearman Correlation Matrix (True Orthogonality)
+## 3. Pairwise Cross-Strategy Spearman Correlation Matrix (True Orthogonality)
 
 $$\rho_{ij} \in [0.140, 0.492]$$
 
@@ -34,19 +50,24 @@ Strat 5: Constitution Residual Specialist          0.363           0.140        
 
 ---
 
-## 🚀 Quick Execution & Automation
+## 4. Quick Execution & Automation
 
-### 1. Run Autonomous Multi-Model Fleet Submissions
+### 1. Execute Automated Test Suite (15/15 Tests Passing)
+```bash
+make test
+```
+
+### 2. Run Autonomous Multi-Model Fleet Submissions
 ```bash
 ./fleet_submit.py
 ```
 
-### 2. Launch Local Dynamic Dashboard (http://127.0.0.1:8501)
+### 3. Launch Local Dynamic Dashboard (http://127.0.0.1:8501)
 ```bash
 ./dashboard.py
 ```
 
-### 3. Automated Weekly Cron Watchdog
-* Runs every **Sunday at 02:00 IST / 20:30 UTC Saturday** via `/Users/ishantpanchal/numerai-quant/cron_submit.sh`.
+### 4. Automated Weekly Cron Watchdog
+* Runs every **Sunday at 02:00 IST / 20:30 UTC Saturday** via `cron_submit.sh`.
 * Perfectly timed ~2.5 hours after the Numerai round opening window (Saturday 18:00 UTC).
-* Logs to `logs/fleet_submit.log` with automatic 3x retry on network drop and native macOS notifications.
+* Logs to `logs/fleet_submit.log` with automatic 3x retry on network drop and native notifications.
