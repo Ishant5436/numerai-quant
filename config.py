@@ -6,9 +6,11 @@ import os
 FEATURE_SET = "medium"  # 705 features for deep multi-factor alpha
 ENSEMBLE_TARGETS = [
     "target",            # Benchmark Cyrus (core alpha)
-    "target_agnes_20",   # Orthogonal residual returns
-    "target_victor_20",  # Volatility-adjusted returns
-    "target_jeremy_20"   # Value/Quality momentum returns
+    "target_cyrusd_60",   # 60-Day Ender Core Benchmark
+    "target_agnes_60",   # 60-Day Orthogonal Residual Returns
+    "target_victor_60",  # 60-Day Volatility-Adjusted Returns
+    "target_jeremy_60",  # 60-Day Value/Quality Momentum Returns
+    "target_xerxes_60"   # 60-Day Tail-Risk Defense Returns
 ]
 NEUTRALIZATION_PROPORTION = 0.25
 
