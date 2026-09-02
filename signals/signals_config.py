@@ -5,8 +5,9 @@ Target Horizon: 60-Day Forward Equity Returns (Supernova Standard)
 
 import os
 
-SIGNALS_DATA_DIR = "/Users/ishantpanchal/numerai-quant/signals/data"
-SIGNALS_MODEL_DIR = "/Users/ishantpanchal/numerai-quant/signals/models"
+SIGNALS_DIR = os.path.dirname(os.path.abspath(__file__))
+SIGNALS_DATA_DIR = os.path.join(SIGNALS_DIR, "data")
+SIGNALS_MODEL_DIR = os.path.join(SIGNALS_DIR, "models")
 os.makedirs(SIGNALS_DATA_DIR, exist_ok=True)
 os.makedirs(SIGNALS_MODEL_DIR, exist_ok=True)
 

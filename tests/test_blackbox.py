@@ -10,9 +10,10 @@ import subprocess
 import pytest
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from fleet_submit import load_feature_groups, generate_tri_ensemble_prediction
 
-NUMERAI_ROOT = "/Users/ishantpanchal/numerai-quant"
+NUMERAI_ROOT = str(Path(__file__).resolve().parent.parent)
 
 
 # ==============================================================================

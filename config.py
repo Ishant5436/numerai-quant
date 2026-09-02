@@ -14,9 +14,12 @@ ENSEMBLE_TARGETS = [
 ]
 NEUTRALIZATION_PROPORTION = 0.25
 
-MODEL_DIR = "/Users/ishantpanchal/numerai-quant/models"
-FEATURES_JSON = "/Users/ishantpanchal/numerai-quant/features.json"
-DATA_DIR = "/Users/ishantpanchal/numerai-quant/data"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_DIR = os.path.join(BASE_DIR, "models")
+FEATURES_JSON = os.path.join(BASE_DIR, "features.json")
+DATA_DIR = os.path.join(BASE_DIR, "data")
+TARGET_COL = "target"
+MODEL_PATH = os.path.join(MODEL_DIR, "lgb_target.pkl")
 
 # Optimized LightGBM Hyperparameters for ARM64 M5 Pro
 LGB_PARAMS = {
