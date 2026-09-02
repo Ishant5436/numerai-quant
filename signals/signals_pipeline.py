@@ -19,13 +19,15 @@ from signals.signals_config import (
     NEUTRALIZATION_PROPORTION
 )
 from signals.alpha_factors import SupernovaAlphaGenerator, rank_01
+from signals.live_data_fetcher import fetch_ohlcv_history, DataFetchError
 from neutralize import neutralize
 
 
 class SupernovaSignalsPipeline:
-    def __init__(self, tickers: list = None):
+    def __init__(self, tickers: list = None, use_live_data: bool = True):
         self.tickers = tickers or REPRESENTATIVE_TICKERS
         self.alpha_gen = SupernovaAlphaGenerator(FACTOR_WEIGHTS)
+        self.use_live_data = use_live_data
 
     def generate_mock_market_history(self, ticker: str, bars: int = 260) -> pd.DataFrame:
         """
@@ -50,6 +52,17 @@ class SupernovaSignalsPipeline:
             "volume": volumes
         })
 
+    def get_market_history(self, ticker: str, bars: int = 252) -> pd.DataFrame:
+        """
+        Real 252-day OHLCV history when self.use_live_data is True (live
+        yfinance fetch, falling back to cached bars if offline -- see
+        signals.live_data_fetcher). Synthetic GBM history otherwise, for
+        deterministic offline testing/benchmarking.
+        """
+        if not self.use_live_data:
+            return self.generate_mock_market_history(ticker, bars=bars)
+        return fetch_ohlcv_history(ticker, bars=bars)
+
     def run_pipeline(self, output_filename: str = None) -> pd.DataFrame:
         """
         Executes end-to-end multi-factor signal extraction, rank combination,
@@ -58,8 +71,15 @@ class SupernovaSignalsPipeline:
         assert len(self.tickers) > 0, "Ticker universe cannot be empty"
 
         factor_records = []
+        skipped_tickers = []
         for ticker in self.tickers:
-            history = self.generate_mock_market_history(ticker, bars=260)
+            try:
+                history = self.get_market_history(ticker, bars=252)
+            except DataFetchError as e:
+                # One bad ticker (delisted, rate-limited, no cache yet)
+                # should not abort the whole universe's run.
+                skipped_tickers.append(ticker)
+                continue
             factors = self.alpha_gen.compute_factors_for_series(
                 closes=history["close"],
                 highs=history["high"],
@@ -68,6 +88,12 @@ class SupernovaSignalsPipeline:
             )
             factors["ticker"] = ticker
             factor_records.append(factors)
+
+        if not factor_records:
+            raise DataFetchError(
+                f"No usable market history for any of {len(self.tickers)} tickers "
+                f"(skipped: {skipped_tickers})"
+            )
 
         factor_df = pd.DataFrame(factor_records).set_index("ticker")
 
