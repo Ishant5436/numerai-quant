@@ -50,6 +50,39 @@ def load_feature_groups() -> dict:
     return groups
 
 
+def resolve_strategy_config(model_name: str, idx: int) -> tuple[int, str, float]:
+    """
+    Deterministically maps a model name and index to its orthogonal strategy specification:
+    Returns (strat_id, feature_group_key, neutralization_proportion).
+    Guarantees zero unhandled states, zero uninitialized variables, and clean testability.
+    """
+    name_lower = (model_name or "").lower()
+    slot = idx % 10
+
+    if "xerxes" in name_lower:
+        return (4, "macro", 0.45)
+    elif "macro_tail" in name_lower or "tail" in name_lower or "sam" in name_lower or slot == 9:
+        return (10, "macro_tail", 0.45)
+    elif "fund" in name_lower or "jeremy" in name_lower or slot == 1:
+        return (2, "fundamental", 0.35)
+    elif "mom" in name_lower or "victor" in name_lower or slot == 2:
+        return (3, "momentum", 0.40)
+    elif "macro" in name_lower or slot == 3:
+        return (4, "macro", 0.45)
+    elif "res" in name_lower or "delta" in name_lower or slot == 4:
+        return (5, "constitution", 0.50)
+    elif "cyrus" in name_lower or slot == 5:
+        return (6, "all_medium", 0.30)
+    elif "qual" in name_lower or "def" in name_lower or slot == 6:
+        return (7, "quality_defensive", 0.35)
+    elif "vel" in name_lower or "trend" in name_lower or slot == 7:
+        return (8, "trend_velocity", 0.40)
+    elif "val" in name_lower or "cap" in name_lower or slot == 8:
+        return (9, "value_capital", 0.35)
+    else:
+        return (1, "all_medium", 0.25)
+
+
 def generate_tri_ensemble_prediction(live_df: pd.DataFrame, strat_id: int, feature_subset: list, neut_proportion: float, neutralizer_feats: list, allow_mock_fallback: bool = False) -> np.ndarray:
     lgb_path = os.path.join(TRI_DIR, f"lgb_strat_{strat_id}.pkl")
     xgb_path = os.path.join(TRI_DIR, f"xgb_strat_{strat_id}.pkl")
@@ -114,37 +147,9 @@ def main():
         print(f"\n--- Processing Model [{idx+1}/{len(models)}]: '{model_name}' (ID: {model_id}) ---")
         preds_path = os.path.join(DATA_DIR, f"predictions_{model_name}_round_{current_round}.csv")
 
-        slot = idx % 10
-        if "fund" in name_lower or "jeremy" in name_lower or slot == 1:
-            print("Applying Strategy 2: Fundamental Tri-Ensemble (186 features, 35% Neutralized)...")
-            preds = generate_tri_ensemble_prediction(live_df, 2, groups["fundamental"], 0.35, neutralizer_feats)
-        elif "mom" in name_lower or "victor" in name_lower or slot == 2:
-            print("Applying Strategy 3: Momentum Tri-Ensemble (133 features, 40% Neutralized)...")
-            preds = generate_tri_ensemble_prediction(live_df, 3, groups["momentum"], 0.40, neutralizer_feats)
-        elif "macro" in name_lower or "xerxes" in name_lower or slot == 3:
-            print("Applying Strategy 4: Macro Regime Tri-Ensemble (278 features, 45% Neutralized)...")
-            preds = generate_tri_ensemble_prediction(live_df, 4, groups["macro"], 0.45, neutralizer_feats)
-        elif "res" in name_lower or "delta" in name_lower or slot == 4:
-            print("Applying Strategy 5: Constitution Residual Tri-Ensemble (155 features, 50% Neutralized)...")
-            preds = generate_tri_ensemble_prediction(live_df, 5, groups["constitution"], 0.50, neutralizer_feats)
-        elif "cyrus" in name_lower or slot == 5:
-            print("Applying Strategy 6: Cyrusd-20 Deep Horizon (705 features, 30% Neutralized)...")
-            preds = generate_tri_ensemble_prediction(live_df, 6, groups["all_medium"], 0.30, neutralizer_feats)
-        elif "qual" in name_lower or "def" in name_lower or slot == 6:
-            print("Applying Strategy 7: Low-Volatility Quality Specialist (104 features, 35% Neutralized)...")
-            preds = generate_tri_ensemble_prediction(live_df, 7, groups["quality_defensive"], 0.35, neutralizer_feats)
-        elif "vel" in name_lower or "trend" in name_lower or slot == 7:
-            print("Applying Strategy 8: High-Beta Trend Velocity Specialist (242 features, 40% Neutralized)...")
-            preds = generate_tri_ensemble_prediction(live_df, 8, groups["trend_velocity"], 0.40, neutralizer_feats)
-        elif "val" in name_lower or "cap" in name_lower or slot == 8:
-            print("Applying Strategy 9: Capital Efficiency & Value Specialist (304 features, 35% Neutralized)...")
-            preds = generate_tri_ensemble_prediction(live_df, 9, groups["value_capital"], 0.35, neutralizer_feats)
-        elif "tail" in name_lower or slot == 9:
-            print("Applying Strategy 10: Macro Regime Tail Shield Specialist (156 features, 45% Neutralized)...")
-            preds = generate_tri_ensemble_prediction(live_df, 10, groups["macro_tail"], 0.45, neutralizer_feats)
-        else:
-            print("Applying Strategy 1: Core Tri-Ensemble Flagship (705 features, 25% Neutralized)...")
-            preds = generate_tri_ensemble_prediction(live_df, 1, groups["all_medium"], 0.25, neutralizer_feats)
+        strat_id, group_key, neut_prop = resolve_strategy_config(model_name, idx)
+        print(f"Applying Strategy {strat_id} ('{group_key}', {len(groups[group_key])} features, {neut_prop*100:.0f}% Neutralized)...")
+        preds = generate_tri_ensemble_prediction(live_df, strat_id, groups[group_key], neut_prop, neutralizer_feats)
 
         sub_df = pd.DataFrame({"id": live_df.index, "prediction": preds})
         sub_df.to_csv(preds_path, index=False)
