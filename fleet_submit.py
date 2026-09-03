@@ -41,7 +41,11 @@ def load_feature_groups() -> dict:
         "fundamental": get_subset(["intelligence", "charisma", "wisdom"]),
         "momentum": get_subset(["strength", "dexterity", "agility"]),
         "macro": get_subset(["serenity", "sunshine", "midnight"]),
-        "constitution": get_subset(["constitution", "dexterity"])
+        "constitution": get_subset(["constitution", "dexterity"]),
+        "quality_defensive": get_subset(["serenity", "wisdom", "intelligence"]),
+        "trend_velocity": get_subset(["agility", "strength", "sunshine"]),
+        "value_capital": get_subset(["charisma", "wisdom", "constitution"]),
+        "macro_tail": get_subset(["midnight", "rain", "serenity"])
     }
     return groups
 
@@ -110,19 +114,34 @@ def main():
         print(f"\n--- Processing Model [{idx+1}/{len(models)}]: '{model_name}' (ID: {model_id}) ---")
         preds_path = os.path.join(DATA_DIR, f"predictions_{model_name}_round_{current_round}.csv")
 
-        name_lower = model_name.lower()
-        if "fund" in name_lower or "jeremy" in name_lower or (idx % 5 == 1):
+        slot = idx % 10
+        if "fund" in name_lower or "jeremy" in name_lower or slot == 1:
             print("Applying Strategy 2: Fundamental Tri-Ensemble (186 features, 35% Neutralized)...")
             preds = generate_tri_ensemble_prediction(live_df, 2, groups["fundamental"], 0.35, neutralizer_feats)
-        elif "mom" in name_lower or "victor" in name_lower or (idx % 5 == 2):
+        elif "mom" in name_lower or "victor" in name_lower or slot == 2:
             print("Applying Strategy 3: Momentum Tri-Ensemble (133 features, 40% Neutralized)...")
             preds = generate_tri_ensemble_prediction(live_df, 3, groups["momentum"], 0.40, neutralizer_feats)
-        elif "macro" in name_lower or "xerxes" in name_lower or (idx % 5 == 3):
+        elif "macro" in name_lower or "xerxes" in name_lower or slot == 3:
             print("Applying Strategy 4: Macro Regime Tri-Ensemble (278 features, 45% Neutralized)...")
             preds = generate_tri_ensemble_prediction(live_df, 4, groups["macro"], 0.45, neutralizer_feats)
-        elif "res" in name_lower or "delta" in name_lower or (idx % 5 == 4):
+        elif "res" in name_lower or "delta" in name_lower or slot == 4:
             print("Applying Strategy 5: Constitution Residual Tri-Ensemble (155 features, 50% Neutralized)...")
             preds = generate_tri_ensemble_prediction(live_df, 5, groups["constitution"], 0.50, neutralizer_feats)
+        elif "cyrus" in name_lower or slot == 5:
+            print("Applying Strategy 6: Cyrusd-20 Deep Horizon (705 features, 30% Neutralized)...")
+            preds = generate_tri_ensemble_prediction(live_df, 6, groups["all_medium"], 0.30, neutralizer_feats)
+        elif "qual" in name_lower or "def" in name_lower or slot == 6:
+            print("Applying Strategy 7: Low-Volatility Quality Specialist (104 features, 35% Neutralized)...")
+            preds = generate_tri_ensemble_prediction(live_df, 7, groups["quality_defensive"], 0.35, neutralizer_feats)
+        elif "vel" in name_lower or "trend" in name_lower or slot == 7:
+            print("Applying Strategy 8: High-Beta Trend Velocity Specialist (242 features, 40% Neutralized)...")
+            preds = generate_tri_ensemble_prediction(live_df, 8, groups["trend_velocity"], 0.40, neutralizer_feats)
+        elif "val" in name_lower or "cap" in name_lower or slot == 8:
+            print("Applying Strategy 9: Capital Efficiency & Value Specialist (304 features, 35% Neutralized)...")
+            preds = generate_tri_ensemble_prediction(live_df, 9, groups["value_capital"], 0.35, neutralizer_feats)
+        elif "tail" in name_lower or slot == 9:
+            print("Applying Strategy 10: Macro Regime Tail Shield Specialist (156 features, 45% Neutralized)...")
+            preds = generate_tri_ensemble_prediction(live_df, 10, groups["macro_tail"], 0.45, neutralizer_feats)
         else:
             print("Applying Strategy 1: Core Tri-Ensemble Flagship (705 features, 25% Neutralized)...")
             preds = generate_tri_ensemble_prediction(live_df, 1, groups["all_medium"], 0.25, neutralizer_feats)

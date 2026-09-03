@@ -36,7 +36,10 @@ def test_blackbox_features_json_schema():
 def test_blackbox_load_feature_groups_integrity():
     """Black-box: load_feature_groups returns non-empty disjoint/orthogonal strategy subsets."""
     groups = load_feature_groups()
-    expected_strategies = ["all_medium", "fundamental", "momentum", "macro", "constitution"]
+    expected_strategies = [
+        "all_medium", "fundamental", "momentum", "macro", "constitution",
+        "quality_defensive", "trend_velocity", "value_capital", "macro_tail"
+    ]
     for strat in expected_strategies:
         assert strat in groups, f"Strategy subset '{strat}' missing"
         assert len(groups[strat]) > 0, f"Strategy subset '{strat}' is empty"
@@ -71,6 +74,37 @@ def test_blackbox_prediction_generation_bounds():
     assert not np.isinf(preds).any(), "Predictions must contain ZERO Infs"
     assert np.all(preds >= 0.0)
     assert np.all(preds <= 1.0)
+
+
+def test_blackbox_expansion_strategies_6_to_10_bounds():
+    """Black-box: strategies 6 through 10 generate valid [0, 1] bounded predictions with zero NaNs."""
+    groups = load_feature_groups()
+    medium_feats = groups["all_medium"]
+    n_rows = 20
+    np.random.seed(123)
+    fake_data = np.random.uniform(0, 1, size=(n_rows, len(medium_feats)))
+    live_df = pd.DataFrame(fake_data, columns=medium_feats, index=[f"id_{i}" for i in range(n_rows)])
+    neutralizer_feats = medium_feats[:20]
+
+    expansion_mapping = {
+        6: ("all_medium", 0.30),
+        7: ("quality_defensive", 0.35),
+        8: ("trend_velocity", 0.40),
+        9: ("value_capital", 0.35),
+        10: ("macro_tail", 0.45)
+    }
+
+    for sid, (grp, neut) in expansion_mapping.items():
+        preds = generate_tri_ensemble_prediction(
+            live_df, strat_id=sid, feature_subset=groups[grp], neut_proportion=neut,
+            neutralizer_feats=neutralizer_feats, allow_mock_fallback=True
+        )
+        assert len(preds) == n_rows
+        assert not np.isnan(preds).any(), f"Strategy {sid} produced NaNs"
+        assert not np.isinf(preds).any(), f"Strategy {sid} produced Infs"
+        assert np.all(preds >= 0.0), f"Strategy {sid} lower bound violated"
+        assert np.all(preds <= 1.0), f"Strategy {sid} upper bound violated"
+
 
 
 def test_blackbox_production_fails_loudly_when_models_missing():
