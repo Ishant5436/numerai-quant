@@ -55,32 +55,48 @@ def resolve_strategy_config(model_name: str, idx: int) -> tuple[int, str, float]
     Deterministically maps a model name and index to its orthogonal strategy specification:
     Returns (strat_id, feature_group_key, neutralization_proportion).
     Guarantees zero unhandled states, zero uninitialized variables, and clean testability.
+    Phase 1: Explicit keyword matches in model name take absolute priority.
+    Phase 2: Fallback to modulo slot routing for generic/unbranded model names.
     """
     name_lower = (model_name or "").lower()
-    slot = idx % 10
 
+    # 1. Explicit keyword matching in model name
     if "xerxes" in name_lower:
         return (4, "macro", 0.45)
-    elif "macro_tail" in name_lower or "tail" in name_lower or "sam" in name_lower or slot == 9:
+    elif "macro_tail" in name_lower or "tail" in name_lower or "sam" in name_lower:
         return (10, "macro_tail", 0.45)
-    elif "fund" in name_lower or "jeremy" in name_lower or slot == 1:
-        return (2, "fundamental", 0.35)
-    elif "mom" in name_lower or "victor" in name_lower or slot == 2:
-        return (3, "momentum", 0.40)
-    elif "macro" in name_lower or slot == 3:
+    elif "macro" in name_lower:
         return (4, "macro", 0.45)
-    elif "res" in name_lower or "delta" in name_lower or slot == 4:
+    elif "fund" in name_lower or "jeremy" in name_lower:
+        return (2, "fundamental", 0.35)
+    elif "mom" in name_lower or "victor" in name_lower:
+        return (3, "momentum", 0.40)
+    elif "res" in name_lower or "delta" in name_lower:
         return (5, "constitution", 0.50)
-    elif "cyrus" in name_lower or slot == 5:
+    elif "cyrus" in name_lower:
         return (6, "all_medium", 0.30)
-    elif "qual" in name_lower or "def" in name_lower or slot == 6:
+    elif "qual" in name_lower or "def" in name_lower:
         return (7, "quality_defensive", 0.35)
-    elif "vel" in name_lower or "trend" in name_lower or slot == 7:
+    elif "vel" in name_lower or "trend" in name_lower:
         return (8, "trend_velocity", 0.40)
-    elif "val" in name_lower or "cap" in name_lower or slot == 8:
+    elif "val" in name_lower or "cap" in name_lower:
         return (9, "value_capital", 0.35)
-    else:
-        return (1, "all_medium", 0.25)
+
+    # 2. Modulo slot fallback for generic model names
+    slot = idx % 10
+    slot_map = {
+        0: (1, "all_medium", 0.25),
+        1: (2, "fundamental", 0.35),
+        2: (3, "momentum", 0.40),
+        3: (4, "macro", 0.45),
+        4: (5, "constitution", 0.50),
+        5: (6, "all_medium", 0.30),
+        6: (7, "quality_defensive", 0.35),
+        7: (8, "trend_velocity", 0.40),
+        8: (9, "value_capital", 0.35),
+        9: (10, "macro_tail", 0.45),
+    }
+    return slot_map.get(slot, (1, "all_medium", 0.25))
 
 
 def generate_tri_ensemble_prediction(live_df: pd.DataFrame, strat_id: int, feature_subset: list, neut_proportion: float, neutralizer_feats: list, allow_mock_fallback: bool = False) -> np.ndarray:

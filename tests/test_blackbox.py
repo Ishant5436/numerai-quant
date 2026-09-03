@@ -182,6 +182,11 @@ def test_blackbox_fleet_submit_main_orchestration_mocked(monkeypatch, tmp_path):
         "cypherpole_mom": "mod-3",
         "cypherpole_macro": "mod-4",
         "cypherpole_res": "mod-5",
+        "cypherpole_cyrus": "mod-6",
+        "cypherpole_qual": "mod-7",
+        "cypherpole_vel": "mod-8",
+        "cypherpole_val": "mod-9",
+        "cypherpole_tail": "mod-10",
     }
     mock_napi.upload_predictions.return_value = "sub-12345"
 
@@ -216,5 +221,5 @@ def test_blackbox_fleet_submit_main_orchestration_mocked(monkeypatch, tmp_path):
     assert mock_napi.get_current_round.called
     assert mock_napi.get_models.called
     assert mock_napi.download_dataset.called
-    assert mock_napi.upload_predictions.call_count == 5
+    assert mock_napi.upload_predictions.call_count == 10
 
