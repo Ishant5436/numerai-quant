@@ -178,23 +178,34 @@ def main():
     print(f"Live market universe loaded: {len(live_df)} assets")
     neutralizer_feats = groups["all_medium"][:60]
 
+    failed_models = []
+    success_models = []
+
     for idx, (model_name, model_id) in enumerate(models.items()):
         print(f"\n--- Processing Model [{idx+1}/{len(models)}]: '{model_name}' (ID: {model_id}) ---")
-        preds_path = os.path.join(DATA_DIR, f"predictions_{model_name}_round_{current_round}.csv")
+        try:
+            preds_path = os.path.join(DATA_DIR, f"predictions_{model_name}_round_{current_round}.csv")
 
-        strat_id, group_key, neut_prop = resolve_strategy_config(model_name, idx)
-        print(f"Applying Strategy {strat_id} ('{group_key}', {len(groups[group_key])} features, {neut_prop*100:.0f}% Neutralized)...")
-        preds = generate_tri_ensemble_prediction(live_df, strat_id, groups[group_key], neut_prop, neutralizer_feats)
+            strat_id, group_key, neut_prop = resolve_strategy_config(model_name, idx)
+            print(f"Applying Strategy {strat_id} ('{group_key}', {len(groups[group_key])} features, {neut_prop*100:.0f}% Neutralized)...")
+            preds = generate_tri_ensemble_prediction(live_df, strat_id, groups[group_key], neut_prop, neutralizer_feats)
 
-        sub_df = pd.DataFrame({"id": live_df.index, "prediction": preds})
-        sub_df.to_csv(preds_path, index=False)
-        print(f"Saved {len(sub_df)} predictions -> {preds_path}")
+            sub_df = pd.DataFrame({"id": live_df.index, "prediction": preds})
+            sub_df.to_csv(preds_path, index=False)
+            print(f"Saved {len(sub_df)} predictions -> {preds_path}")
 
-        print(f"Uploading submission to Numerai (Model ID: {model_id})...")
-        sub_id = napi.upload_predictions(preds_path, model_id=model_id)
-        print(f"[SUCCESS]  Successfully submitted '{model_name}' to Round {current_round}! Submission ID: {sub_id}")
+            print(f"Uploading submission to Numerai (Model ID: {model_id})...")
+            sub_id = napi.upload_predictions(preds_path, model_id=model_id)
+            print(f"[SUCCESS]  Successfully submitted '{model_name}' to Round {current_round}! Submission ID: {sub_id}")
+            success_models.append(model_name)
+        except Exception as err:
+            print(f"[ERROR]  Failed processing '{model_name}': {err}")
+            failed_models.append((model_name, str(err)))
 
-    print(f"\n[COMPLETE]  Fleet submission complete across all {len(models)} models for Round {current_round}!")
+    print(f"\n[COMPLETE]  Fleet submission complete. Succeeded: {len(success_models)}/{len(models)} | Failed: {len(failed_models)}")
+    if failed_models:
+        print(f"[FAILURES]  Failed models: {failed_models}")
+        raise RuntimeError(f"Fleet submission completed with {len(failed_models)} failed model(s): {failed_models}")
 
 
 if __name__ == "__main__":

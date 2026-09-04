@@ -5,6 +5,18 @@ set -euo pipefail
 LOG_FILE="/Users/ishantpanchal/numerai-quant/logs/fleet_submit.log"
 PYTHON_BIN="/Users/ishantpanchal/numerai-quant/venv/bin/python"
 SCRIPT_PATH="/Users/ishantpanchal/numerai-quant/fleet_submit.py"
+LOCK_FILE="/tmp/numerai_fleet_submit.lock"
+
+# Atomic concurrency guard: prevent race conditions and duplicate fires
+if [ -f "$LOCK_FILE" ]; then
+    EXISTING_PID=$(cat "$LOCK_FILE" 2>/dev/null || true)
+    if [ -n "$EXISTING_PID" ] && kill -0 "$EXISTING_PID" 2>/dev/null; then
+        echo "⚠️ [$(date '+%Y-%m-%d %H:%M:%S')] Another submission process (PID $EXISTING_PID) is running. Exiting." >> "$LOG_FILE"
+        exit 0
+    fi
+fi
+echo "$$" > "$LOCK_FILE"
+trap 'rm -f "$LOCK_FILE"' EXIT INT TERM
 
 echo "========================================================" >> "$LOG_FILE"
 echo "🕒 [$(date '+%Y-%m-%d %H:%M:%S')] Launching Numerai Fleet Submission..." >> "$LOG_FILE"
