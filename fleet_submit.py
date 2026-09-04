@@ -45,7 +45,11 @@ def load_feature_groups() -> dict:
         "quality_defensive": get_subset(["serenity", "wisdom", "intelligence"]),
         "trend_velocity": get_subset(["agility", "strength", "sunshine"]),
         "value_capital": get_subset(["charisma", "wisdom", "constitution"]),
-        "macro_tail": get_subset(["midnight", "rain", "serenity"])
+        "macro_tail": get_subset(["midnight", "rain", "serenity"]),
+        "alpha_conviction": get_subset(["intelligence", "strength", "wisdom"]),
+        "volatility_defensive": get_subset(["serenity", "constitution", "rain"]),
+        "risk_parity": get_subset(["sunshine", "intelligence", "dexterity"]),
+        "macro_hedged": get_subset(["midnight", "agility", "rain"])
     }
     return groups
 
@@ -65,8 +69,6 @@ def resolve_strategy_config(model_name: str, idx: int) -> tuple[int, str, float]
         return (4, "macro", 0.45)
     elif "macro_tail" in name_lower or "tail" in name_lower or "sam" in name_lower:
         return (10, "macro_tail", 0.45)
-    elif "macro" in name_lower:
-        return (4, "macro", 0.45)
     elif "fund" in name_lower or "jeremy" in name_lower:
         return (2, "fundamental", 0.35)
     elif "mom" in name_lower or "victor" in name_lower:
@@ -81,9 +83,21 @@ def resolve_strategy_config(model_name: str, idx: int) -> tuple[int, str, float]
         return (8, "trend_velocity", 0.40)
     elif "val" in name_lower or "cap" in name_lower:
         return (9, "value_capital", 0.35)
+    elif "macro_hedged" in name_lower or "hedged" in name_lower:
+        return (15, "macro_hedged", 0.50)
+    elif "macro" in name_lower:
+        return (4, "macro", 0.45)
+    elif "alpha" in name_lower:
+        return (11, "alpha_conviction", 0.30)
+    elif "vol" in name_lower:
+        return (12, "volatility_defensive", 0.40)
+    elif "sharpe" in name_lower:
+        return (13, "risk_parity", 0.35)
+    elif "deep" in name_lower:
+        return (14, "all_medium", 0.25)
 
     # 2. Modulo slot fallback for generic model names
-    slot = idx % 10
+    slot = idx % 15
     slot_map = {
         0: (1, "all_medium", 0.25),
         1: (2, "fundamental", 0.35),
@@ -95,6 +109,11 @@ def resolve_strategy_config(model_name: str, idx: int) -> tuple[int, str, float]
         7: (8, "trend_velocity", 0.40),
         8: (9, "value_capital", 0.35),
         9: (10, "macro_tail", 0.45),
+        10: (11, "alpha_conviction", 0.30),
+        11: (12, "volatility_defensive", 0.40),
+        12: (13, "risk_parity", 0.35),
+        13: (14, "all_medium", 0.25),
+        14: (15, "macro_hedged", 0.50),
     }
     return slot_map.get(slot, (1, "all_medium", 0.25))
 

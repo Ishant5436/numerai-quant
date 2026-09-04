@@ -38,7 +38,8 @@ def test_blackbox_load_feature_groups_integrity():
     groups = load_feature_groups()
     expected_strategies = [
         "all_medium", "fundamental", "momentum", "macro", "constitution",
-        "quality_defensive", "trend_velocity", "value_capital", "macro_tail"
+        "quality_defensive", "trend_velocity", "value_capital", "macro_tail",
+        "alpha_conviction", "volatility_defensive", "risk_parity", "macro_hedged"
     ]
     for strat in expected_strategies:
         assert strat in groups, f"Strategy subset '{strat}' missing"
@@ -47,10 +48,11 @@ def test_blackbox_load_feature_groups_integrity():
 
 
 def test_blackbox_resolve_strategy_config_coverage():
-    """Black-box: resolve_strategy_config deterministically maps names/indices across all 10 strategies."""
+    """Black-box: resolve_strategy_config deterministically maps names/indices across all 15 strategies."""
     expected_strats = {
         0: 1, 1: 2, 2: 3, 3: 4, 4: 5,
-        5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 1
+        5: 6, 6: 7, 7: 8, 8: 9, 9: 10,
+        10: 11, 11: 12, 12: 13, 13: 14, 14: 15, 15: 1
     }
     for idx, expected_sid in expected_strats.items():
         sid, grp, neut = resolve_strategy_config("generic_model", idx)
@@ -72,6 +74,16 @@ def test_blackbox_resolve_strategy_config_coverage():
         ("trend_vel", 8),
         ("capital_value", 9),
         ("macro_tail_shield", 10),
+        ("cypherpole_alpha", 11),
+        ("alpha_model", 11),
+        ("cypherpole_vol", 12),
+        ("vol_guard", 12),
+        ("cypherpole_sharpe", 13),
+        ("sharpe_optimizer", 13),
+        ("cypherpole_deep", 14),
+        ("deep_horizon", 14),
+        ("cypherpole_hedged", 15),
+        ("macro_hedged_shield", 15),
     ]
     for name, expected_sid in keyword_cases:
         sid, grp, neut = resolve_strategy_config(name, 0)
@@ -144,6 +156,36 @@ def test_blackbox_expansion_strategies_6_to_10_bounds():
         assert np.all(preds <= 1.0), f"Strategy {sid} upper bound violated"
 
 
+def test_blackbox_expansion_strategies_11_to_15_bounds():
+    """Black-box: strategies 11 through 15 generate valid [0, 1] bounded predictions with zero NaNs."""
+    groups = load_feature_groups()
+    medium_feats = groups["all_medium"]
+    n_rows = 20
+    np.random.seed(456)
+    fake_data = np.random.uniform(0, 1, size=(n_rows, len(medium_feats)))
+    live_df = pd.DataFrame(fake_data, columns=medium_feats, index=[f"id_{i}" for i in range(n_rows)])
+    neutralizer_feats = medium_feats[:20]
+
+    expansion_mapping = {
+        11: ("alpha_conviction", 0.30),
+        12: ("volatility_defensive", 0.40),
+        13: ("risk_parity", 0.35),
+        14: ("all_medium", 0.25),
+        15: ("macro_hedged", 0.50)
+    }
+
+    for sid, (grp, neut) in expansion_mapping.items():
+        preds = generate_tri_ensemble_prediction(
+            live_df, strat_id=sid, feature_subset=groups[grp], neut_proportion=neut,
+            neutralizer_feats=neutralizer_feats, allow_mock_fallback=True
+        )
+        assert len(preds) == n_rows
+        assert not np.isnan(preds).any(), f"Strategy {sid} produced NaNs"
+        assert not np.isinf(preds).any(), f"Strategy {sid} produced Infs"
+        assert np.all(preds >= 0.0), f"Strategy {sid} lower bound violated"
+        assert np.all(preds <= 1.0), f"Strategy {sid} upper bound violated"
+
+
 
 def test_blackbox_production_fails_loudly_when_models_missing():
     """Production guard: verify default allow_mock_fallback=False raises FileNotFoundError when weights missing."""
@@ -187,6 +229,11 @@ def test_blackbox_fleet_submit_main_orchestration_mocked(monkeypatch, tmp_path):
         "cypherpole_vel": "mod-8",
         "cypherpole_val": "mod-9",
         "cypherpole_tail": "mod-10",
+        "cypherpole_alpha": "mod-11",
+        "cypherpole_vol": "mod-12",
+        "cypherpole_sharpe": "mod-13",
+        "cypherpole_deep": "mod-14",
+        "cypherpole_hedged": "mod-15",
     }
     mock_napi.upload_predictions.return_value = "sub-12345"
 
@@ -221,5 +268,5 @@ def test_blackbox_fleet_submit_main_orchestration_mocked(monkeypatch, tmp_path):
     assert mock_napi.get_current_round.called
     assert mock_napi.get_models.called
     assert mock_napi.download_dataset.called
-    assert mock_napi.upload_predictions.call_count == 10
+    assert mock_napi.upload_predictions.call_count == 15
 
