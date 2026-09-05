@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Numerai Multi-Model Fleet Autonomous Submission Engine (Tri-Ensemble Stacking Architecture)
-Blends LightGBM + XGBoost + CatBoost predictions across 5 orthogonal feature groups:
-1. Strategy 1 (Flagship / 'cypherpole') -> Core Tri-Ensemble (705 features, 25% Neutralized)
-2. Strategy 2 (Fundamental / 'fund')    -> Fundamental Tri-Ensemble (186 features, 35% Neutralized)
-3. Strategy 3 (Momentum / 'mom')        -> Momentum Tri-Ensemble (133 features, 40% Neutralized)
-4. Strategy 4 (Macro / 'macro')         -> Macro Regime Tri-Ensemble (278 features, 45% Neutralized)
-5. Strategy 5 (Residual / 'res')        -> Constitution Residual Tri-Ensemble (155 features, 50% Neutralized)
+Numerai Multi-Model Fleet Autonomous Submission Engine (Hybrid 15-Model Quantitative Fleet)
+Architecture:
+1. Strategies 1-5 (Flagship Tier): Tri-Ensemble Stacking (LightGBM + XGBoost + CatBoost 40/30/30 blend across
+   5 orthogonal feature groups with 25% - 50% linear QR feature neutralization).
+2. Strategies 6-15 (Specialist Tier): Orthogonal Factor Specialists (Dedicated LightGBM models targeting
+   uncorrelated factor sub-regimes: Quality Defensive, Trend Velocity, Value Capital, Macro Tail,
+   Alpha Conviction, Volatility Defensive, Risk Parity, Macro Hedged).
 """
 
 import os

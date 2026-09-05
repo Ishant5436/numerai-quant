@@ -120,6 +120,29 @@ class SupernovaSignalsPipeline:
             output_filename = os.path.join(SIGNALS_DATA_DIR, f"signals_supernova_submission_{today_str}.csv")
 
         submission_df.to_csv(output_filename, index=False)
+
+        # 4. Optional automated upload if Signals models are registered on connected account
+        try:
+            from numerapi import SignalsAPI
+            auth = os.environ.get("NUMERAI_MCP_AUTH", "")
+            public_id = os.environ.get("NUMERAI_PUBLIC_ID", "")
+            secret_key = os.environ.get("NUMERAI_SECRET_KEY", "")
+            if "$" in auth and not (public_id and secret_key):
+                public_id, secret_key = auth.split("$", 1)
+
+            if public_id and secret_key:
+                sapi = SignalsAPI(public_id=public_id, secret_key=secret_key)
+                signals_models = sapi.get_models()
+                if signals_models:
+                    for s_name, s_id in signals_models.items():
+                        print(f"Uploading Signals predictions to model '{s_name}' (ID: {s_id})...")
+                        sub_id = sapi.upload_predictions(output_filename, model_id=s_id)
+                        print(f"[SUCCESS] Signals model '{s_name}' submitted! Submission ID: {sub_id}")
+                else:
+                    print("[INFO] Zero Numerai Signals models registered on account. Signals saved locally for offline evaluation.")
+        except Exception as upload_err:
+            print(f"[NOTE] Signals automated upload skipped: {upload_err}")
+
         return submission_df
 
 
