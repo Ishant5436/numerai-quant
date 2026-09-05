@@ -5,8 +5,11 @@ set -euo pipefail
 LOG_FILE="/Users/ishantpanchal/numerai-quant/logs/fleet_submit.log"
 PYTHON_BIN="/Users/ishantpanchal/numerai-quant/venv/bin/python"
 SCRIPT_PATH="/Users/ishantpanchal/numerai-quant/fleet_submit.py"
+SIGNALS_PATH="/Users/ishantpanchal/numerai-quant/signals/signals_pipeline.py"
 LOCK_DIR="/tmp/numerai_fleet_submit.lockdir"
 PID_FILE="$LOCK_DIR/pid"
+
+cd /Users/ishantpanchal/numerai-quant
 
 # Atomic concurrency guard: POSIX mkdir is atomic (no TOCTOU window)
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
@@ -35,7 +38,7 @@ SUCCESS=false
 for attempt in $(seq 1 $MAX_RETRIES); do
     echo "▶ Attempt $attempt of $MAX_RETRIES..." >> "$LOG_FILE"
     echo "▶ Generating Signals v3 Supernova predictions..." >> "$LOG_FILE"
-    $PYTHON_BIN signals/signals_pipeline.py >> "$LOG_FILE" 2>&1 || true
+    $PYTHON_BIN "$SIGNALS_PATH" >> "$LOG_FILE" 2>&1 || true
 
     if $PYTHON_BIN $SCRIPT_PATH >> "$LOG_FILE" 2>&1; then
         echo "✅ [$(date '+%Y-%m-%d %H:%M:%S')] Fleet submission completed successfully!" >> "$LOG_FILE"
