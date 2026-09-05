@@ -235,7 +235,9 @@ def test_blackbox_fleet_submit_main_orchestration_mocked(monkeypatch, tmp_path):
         "cypherpole_deep": "mod-14",
         "cypherpole_hedged": "mod-15",
     }
-    mock_napi.upload_predictions.return_value = "sub-12345"
+    upload_mock = MagicMock(return_value="sub-12345")
+    monkeypatch.setattr(fleet_submit, "safe_upload_predictions", upload_mock)
+    mock_napi.submission_ids.return_value = [{"id": "sub-12345", "filename": "test.csv"}]
 
     monkeypatch.setattr(fleet_submit, "NumerAPI", lambda **kwargs: mock_napi)
 
@@ -262,6 +264,14 @@ def test_blackbox_fleet_submit_main_orchestration_mocked(monkeypatch, tmp_path):
 
     monkeypatch.setattr(fleet_submit, "generate_tri_ensemble_prediction", safe_gen)
 
+    # Ensure checkpoint file is removed prior to test
+    checkpoint_file = os.path.join(fleet_submit.DATA_DIR, "completed_submissions_round_1346.json")
+    if os.path.exists(checkpoint_file):
+        try:
+            os.remove(checkpoint_file)
+        except OSError:
+            pass
+
     # Execute main()
     fleet_submit.main()
 
@@ -269,7 +279,7 @@ def test_blackbox_fleet_submit_main_orchestration_mocked(monkeypatch, tmp_path):
     assert mock_napi.get_current_round.called
     assert mock_napi.get_models.called
     assert mock_napi.download_dataset.called
-    assert mock_napi.upload_predictions.call_count == 15
+    assert upload_mock.call_count == 15
 
     # Clean up generated test artifacts
     for model_name in mock_napi.get_models.return_value:
@@ -279,6 +289,40 @@ def test_blackbox_fleet_submit_main_orchestration_mocked(monkeypatch, tmp_path):
                 os.remove(test_pred_path)
             except OSError:
                 pass
+    if os.path.exists(checkpoint_file):
+        try:
+            os.remove(checkpoint_file)
+        except OSError:
+            pass
+
+
+def test_blackbox_safe_upload_predictions_verifies_s3_status(monkeypatch):
+    """Verify safe_upload_predictions raises if S3 returns non-200, and returns submission_id on 200."""
+    import unittest.mock
+    import requests
+    from fleet_submit import safe_upload_predictions
+
+    mock_napi = unittest.mock.MagicMock()
+    mock_napi._upload_auth.return_value = {"url": "https://s3.amazonaws.com/test", "filename": "test.csv"}
+    mock_napi.tournament_id = 8
+    mock_napi.raw_query.return_value = {"data": {"create_submission": {"id": "sub-valid-999"}}}
+
+    # Simulate S3 500 error
+    mock_resp_fail = unittest.mock.MagicMock()
+    mock_resp_fail.raise_for_status.side_effect = requests.exceptions.HTTPError("S3 Internal Server Error 500")
+    monkeypatch.setattr(requests, "put", lambda *args, **kwargs: mock_resp_fail)
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        safe_upload_predictions(mock_napi, __file__, "mod-1")
+
+    # Simulate S3 200 OK
+    mock_resp_ok = unittest.mock.MagicMock()
+    mock_resp_ok.raise_for_status.return_value = None
+    monkeypatch.setattr(requests, "put", lambda *args, **kwargs: mock_resp_ok)
+
+    sub_id = safe_upload_predictions(mock_napi, __file__, "mod-1")
+    assert sub_id == "sub-valid-999"
+
 
 
 def test_blackbox_robust_api_call_retry_and_recovery():

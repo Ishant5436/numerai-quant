@@ -5,18 +5,24 @@ set -euo pipefail
 LOG_FILE="/Users/ishantpanchal/numerai-quant/logs/fleet_submit.log"
 PYTHON_BIN="/Users/ishantpanchal/numerai-quant/venv/bin/python"
 SCRIPT_PATH="/Users/ishantpanchal/numerai-quant/fleet_submit.py"
-LOCK_FILE="/tmp/numerai_fleet_submit.lock"
+LOCK_DIR="/tmp/numerai_fleet_submit.lockdir"
+PID_FILE="$LOCK_DIR/pid"
 
-# Atomic concurrency guard: prevent race conditions and duplicate fires
-if [ -f "$LOCK_FILE" ]; then
-    EXISTING_PID=$(cat "$LOCK_FILE" 2>/dev/null || true)
-    if [ -n "$EXISTING_PID" ] && kill -0 "$EXISTING_PID" 2>/dev/null; then
-        echo "⚠️ [$(date '+%Y-%m-%d %H:%M:%S')] Another submission process (PID $EXISTING_PID) is running. Exiting." >> "$LOG_FILE"
-        exit 0
+# Atomic concurrency guard: POSIX mkdir is atomic (no TOCTOU window)
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    if [ -f "$PID_FILE" ]; then
+        EXISTING_PID=$(cat "$PID_FILE" 2>/dev/null || true)
+        if [ -n "$EXISTING_PID" ] && kill -0 "$EXISTING_PID" 2>/dev/null; then
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] Another submission process (PID $EXISTING_PID) is active. Exiting." >> "$LOG_FILE"
+            exit 0
+        fi
     fi
+    # Clean up stale lock if process died unexpectedly
+    rm -rf "$LOCK_DIR"
+    mkdir "$LOCK_DIR"
 fi
-echo "$$" > "$LOCK_FILE"
-trap 'rm -f "$LOCK_FILE"' EXIT INT TERM
+echo "$$" > "$PID_FILE"
+trap 'rm -rf "$LOCK_DIR"' EXIT INT TERM
 
 echo "========================================================" >> "$LOG_FILE"
 echo "🕒 [$(date '+%Y-%m-%d %H:%M:%S')] Launching Numerai Fleet Submission..." >> "$LOG_FILE"

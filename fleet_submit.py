@@ -13,6 +13,7 @@ import os
 import time
 import json
 import joblib
+import requests
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
@@ -30,6 +31,7 @@ def robust_api_call(func, *args, max_retries: int = 5, base_delay: float = 2.0, 
     """
     Execute a NumerAPI or network operation with exponential backoff.
     Mitigates HTTP 429 (rate limits), 5xx server errors, connection resets, and transient timeouts.
+    Fails fast immediately on permanent authentication errors (401/403).
     """
     last_err = None
     for attempt in range(1, max_retries + 1):
@@ -37,12 +39,61 @@ def robust_api_call(func, *args, max_retries: int = 5, base_delay: float = 2.0, 
             return func(*args, **kwargs)
         except Exception as e:
             last_err = e
+            err_msg = str(e).lower()
+            if "unauthorized" in err_msg or "401" in err_msg or "forbidden" in err_msg or "403" in err_msg or "invalid authentication" in err_msg:
+                print(f"[FATAL] Permanent auth error in {description}: {e}. Aborting retries immediately.")
+                raise e
             if attempt == max_retries:
                 break
             sleep_time = base_delay * (2 ** (attempt - 1))
             print(f"[RETRY] {description} failed (Attempt {attempt}/{max_retries}): {e}. Retrying in {sleep_time:.1f}s...")
             time.sleep(sleep_time)
     raise RuntimeError(f"{description} failed permanently after {max_retries} attempts: {last_err}")
+
+
+def safe_upload_predictions(napi: NumerAPI, file_path: str, model_id: str, timeout=(10, 600)) -> str:
+    """
+    Robust upload wrapper that explicitly verifies AWS S3 HTTP PUT status code (2xx)
+    before issuing the create_submission GraphQL mutation.
+    Fixes the upstream numerapi vulnerability where failed PUT uploads silently proceed to create_submission.
+    """
+    upload_auth = napi._upload_auth(
+        "submission_upload_auth", file_path, napi.tournament_id, model_id
+    )
+    headers = {"x_compute_id": os.getenv("NUMERAI_COMPUTE_ID")}
+    with open(file_path, "rb") as file:
+        put_resp = requests.put(
+            upload_auth["url"], data=file.read(), headers=headers, timeout=timeout
+        )
+    put_resp.raise_for_status()
+
+    create_query = """
+        mutation($filename: String!
+                 $tournament: Int!
+                 $modelId: String
+                 $triggerId: String,
+                 $dataDatestamp: Int) {
+            create_submission(filename: $filename
+                              tournament: $tournament
+                              modelId: $modelId
+                              triggerId: $triggerId
+                              source: "numerapi"
+                              dataDatestamp: $dataDatestamp) {
+                id
+            }
+        }
+    """
+    arguments = {
+        "filename": upload_auth["filename"],
+        "tournament": napi.tournament_id,
+        "modelId": model_id,
+        "triggerId": os.getenv("TRIGGER_ID", None),
+        "dataDatestamp": None,
+    }
+    create = napi.raw_query(create_query, arguments, authorization=True)
+    submission_id = create["data"]["create_submission"]["id"]
+    return submission_id
+
 
 
 def load_feature_groups() -> dict:
@@ -211,7 +262,22 @@ def main():
     failed_models = []
     success_models = []
 
+    # Checkpoint tracking: skip models that already successfully submitted in this round
+    checkpoint_file = os.path.join(DATA_DIR, f"completed_submissions_round_{current_round}.json")
+    completed_models = set()
+    if os.path.exists(checkpoint_file):
+        try:
+            with open(checkpoint_file, "r") as f:
+                completed_models = set(json.load(f))
+        except Exception:
+            completed_models = set()
+
     for idx, (model_name, model_id) in enumerate(models.items()):
+        if model_name in completed_models:
+            print(f"\n[SKIP] Model [{idx+1}/{len(models)}]: '{model_name}' already successfully submitted for Round {current_round}.")
+            success_models.append(model_name)
+            continue
+
         print(f"\n--- Processing Model [{idx+1}/{len(models)}]: '{model_name}' (ID: {model_id}) ---")
         try:
             preds_path = os.path.join(DATA_DIR, f"predictions_{model_name}_round_{current_round}.csv")
@@ -224,12 +290,12 @@ def main():
             sub_df.to_csv(preds_path, index=False)
             print(f"Saved {len(sub_df)} predictions -> {preds_path}")
 
-            # Robust upload with per-model retries to absorb transient S3/GraphQL 429/5xx hiccups
+            # Robust upload with per-model retries and explicit AWS S3 HTTP PUT 2xx verification
             sub_id = None
             for upload_attempt in range(1, 4):
                 try:
                     print(f"Uploading submission to Numerai (Model ID: {model_id}, Attempt {upload_attempt}/3)...")
-                    sub_id = napi.upload_predictions(preds_path, model_id=model_id)
+                    sub_id = safe_upload_predictions(napi, preds_path, model_id=model_id)
                     if sub_id:
                         break
                 except Exception as upload_err:
@@ -254,6 +320,12 @@ def main():
 
             print(f"[SUCCESS] Successfully submitted '{model_name}' to Round {current_round}! Submission ID: {sub_id}")
             success_models.append(model_name)
+            completed_models.add(model_name)
+            try:
+                with open(checkpoint_file, "w") as f:
+                    json.dump(list(completed_models), f)
+            except Exception:
+                pass
         except Exception as err:
             print(f"[ERROR] Failed processing '{model_name}': {err}")
             failed_models.append((model_name, str(err)))
