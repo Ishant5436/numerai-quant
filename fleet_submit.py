@@ -10,6 +10,7 @@ Blends LightGBM + XGBoost + CatBoost predictions across 5 orthogonal feature gro
 """
 
 import os
+import time
 import json
 import joblib
 import numpy as np
@@ -23,6 +24,25 @@ load_dotenv(os.path.expanduser("~/.env"))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TRI_DIR = os.path.join(BASE_DIR, "models", "tri_ensemble_fleet")
 ORTHO_DIR = os.path.join(BASE_DIR, "models", "orthogonal_fleet")
+
+
+def robust_api_call(func, *args, max_retries: int = 5, base_delay: float = 2.0, description: str = "API Operation", **kwargs):
+    """
+    Execute a NumerAPI or network operation with exponential backoff.
+    Mitigates HTTP 429 (rate limits), 5xx server errors, connection resets, and transient timeouts.
+    """
+    last_err = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            last_err = e
+            if attempt == max_retries:
+                break
+            sleep_time = base_delay * (2 ** (attempt - 1))
+            print(f"[RETRY] {description} failed (Attempt {attempt}/{max_retries}): {e}. Retrying in {sleep_time:.1f}s...")
+            time.sleep(sleep_time)
+    raise RuntimeError(f"{description} failed permanently after {max_retries} attempts: {last_err}")
 
 
 def load_feature_groups() -> dict:
@@ -163,8 +183,8 @@ def main():
         public_id, secret_key = auth.split("$", 1)
 
     napi = NumerAPI(public_id=public_id, secret_key=secret_key)
-    current_round = napi.get_current_round()
-    models = napi.get_models()
+    current_round = robust_api_call(napi.get_current_round, description="Fetch current round")
+    models = robust_api_call(napi.get_models, description="Fetch account models")
 
     print(f"=== Numerai Fleet Autonomous Tri-Ensemble Submitter: Round {current_round} ===")
     print(f"Connected Account Models ({len(models)}): {models}")
@@ -174,8 +194,17 @@ def main():
     live_path = os.path.join(DATA_DIR, "live.parquet")
 
     print("\nDownloading active live.parquet dataset...")
-    napi.download_dataset("v5.0/live.parquet", live_path)
+    robust_api_call(napi.download_dataset, "v5.0/live.parquet", live_path, description="Download live.parquet")
     live_df = pd.read_parquet(live_path, columns=groups["all_medium"])
+    
+    # Defensive data audit: verify NaNs and impute with neutral median if ever present
+    nan_count = int(live_df.isna().sum().sum())
+    if nan_count > 0:
+        print(f"[WARN] Detected {nan_count} NaNs in live feature universe. Applying neutral rank imputation (0.5)...")
+        live_df = live_df.fillna(0.5)
+    else:
+        print("Feature universe integrity verified: 0 NaNs across all medium features.")
+    
     print(f"Live market universe loaded: {len(live_df)} assets")
     neutralizer_feats = groups["all_medium"][:60]
 
@@ -195,17 +224,43 @@ def main():
             sub_df.to_csv(preds_path, index=False)
             print(f"Saved {len(sub_df)} predictions -> {preds_path}")
 
-            print(f"Uploading submission to Numerai (Model ID: {model_id})...")
-            sub_id = napi.upload_predictions(preds_path, model_id=model_id)
-            print(f"[SUCCESS]  Successfully submitted '{model_name}' to Round {current_round}! Submission ID: {sub_id}")
+            # Robust upload with per-model retries to absorb transient S3/GraphQL 429/5xx hiccups
+            sub_id = None
+            for upload_attempt in range(1, 4):
+                try:
+                    print(f"Uploading submission to Numerai (Model ID: {model_id}, Attempt {upload_attempt}/3)...")
+                    sub_id = napi.upload_predictions(preds_path, model_id=model_id)
+                    if sub_id:
+                        break
+                except Exception as upload_err:
+                    print(f"[WARN] Upload attempt {upload_attempt}/3 for '{model_name}' encountered: {upload_err}")
+                    if upload_attempt < 3:
+                        time.sleep(3.0 * upload_attempt)
+                    else:
+                        raise upload_err
+
+            if not sub_id:
+                raise RuntimeError(f"Upload to Numerai returned empty submission ID for model '{model_name}'")
+
+            # Verify submission confirmation directly in Numerai submission registry
+            try:
+                subs = napi.submission_ids(model_id=model_id)
+                if any(s.get("id") == sub_id for s in subs):
+                    print(f"[VERIFIED] Submission ID {sub_id} confirmed in Numerai submission registry for '{model_name}'.")
+                else:
+                    print(f"[NOTE] Submission ID {sub_id} accepted; registry indexing pending (eventual consistency).")
+            except Exception as v_err:
+                print(f"[WARN] Non-blocking registry check failed for '{model_name}': {v_err}")
+
+            print(f"[SUCCESS] Successfully submitted '{model_name}' to Round {current_round}! Submission ID: {sub_id}")
             success_models.append(model_name)
         except Exception as err:
-            print(f"[ERROR]  Failed processing '{model_name}': {err}")
+            print(f"[ERROR] Failed processing '{model_name}': {err}")
             failed_models.append((model_name, str(err)))
 
-    print(f"\n[COMPLETE]  Fleet submission complete. Succeeded: {len(success_models)}/{len(models)} | Failed: {len(failed_models)}")
+    print(f"\n[COMPLETE] Fleet submission complete. Succeeded: {len(success_models)}/{len(models)} | Failed: {len(failed_models)}")
     if failed_models:
-        print(f"[FAILURES]  Failed models: {failed_models}")
+        print(f"[FAILURES] Failed models: {failed_models}")
         raise RuntimeError(f"Fleet submission completed with {len(failed_models)} failed model(s): {failed_models}")
 
 

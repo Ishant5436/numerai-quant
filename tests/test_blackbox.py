@@ -280,3 +280,29 @@ def test_blackbox_fleet_submit_main_orchestration_mocked(monkeypatch, tmp_path):
             except OSError:
                 pass
 
+
+def test_blackbox_robust_api_call_retry_and_recovery():
+    """Verify that robust_api_call retries transient 429/connection failures and succeeds."""
+    from fleet_submit import robust_api_call
+
+    attempts = 0
+    def flaky_api():
+        nonlocal attempts
+        attempts += 1
+        if attempts < 3:
+            raise ConnectionResetError("Simulated HTTP 429 Rate Limit")
+        return "SUCCESS_DATA"
+
+    res = robust_api_call(flaky_api, max_retries=4, base_delay=0.01, description="Test Flaky API")
+    assert res == "SUCCESS_DATA"
+    assert attempts == 3
+
+    # Test permanent failure
+    def always_fail():
+        raise TimeoutError("Simulated 504 Gateway Timeout")
+
+    with pytest.raises(RuntimeError) as exc_info:
+        robust_api_call(always_fail, max_retries=2, base_delay=0.01, description="Always Fail API")
+    assert "failed permanently" in str(exc_info.value)
+
+
