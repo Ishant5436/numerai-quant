@@ -250,6 +250,7 @@ def test_blackbox_fleet_submit_main_orchestration_mocked(monkeypatch, tmp_path):
     )
 
     def mock_download(path, target_file):
+        os.makedirs(os.path.dirname(os.path.abspath(target_file)), exist_ok=True)
         mini_live.to_parquet(target_file)
 
     mock_napi.download_dataset.side_effect = mock_download
@@ -269,4 +270,13 @@ def test_blackbox_fleet_submit_main_orchestration_mocked(monkeypatch, tmp_path):
     assert mock_napi.get_models.called
     assert mock_napi.download_dataset.called
     assert mock_napi.upload_predictions.call_count == 15
+
+    # Clean up generated test artifacts
+    for model_name in mock_napi.get_models.return_value:
+        test_pred_path = os.path.join(fleet_submit.DATA_DIR, f"predictions_{model_name}_round_1346.csv")
+        if os.path.exists(test_pred_path):
+            try:
+                os.remove(test_pred_path)
+            except OSError:
+                pass
 

@@ -170,6 +170,7 @@ def main():
     print(f"Connected Account Models ({len(models)}): {models}")
 
     groups = load_feature_groups()
+    os.makedirs(DATA_DIR, exist_ok=True)
     live_path = os.path.join(DATA_DIR, "live.parquet")
 
     print("\nDownloading active live.parquet dataset...")
