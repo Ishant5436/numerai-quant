@@ -3,10 +3,9 @@
 > **Statistically Independent, Multi-Factor Machine Learning Fleet for Numerai Tournament v5.0 & Signals v3 Supernova**  
 > *Optimized for Apple Silicon ARM64 (M5 Pro) with Sub-Factor Mining & Linear Feature Neutralization*
 
-[![Tests](https://img.shields.io/badge/Tests-29%2F29%20Passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-34%2F34%20Passed-brightgreen)](tests/)
 [![Tournament](https://img.shields.io/badge/Tournament-v5.0%20Ender%2060D-blue)](config.py)
-[![Signals](https://img.shields.io/badge/Signals-v3%20Supernova-purple)](signals/)
-[![Linear Algebra](https://img.shields.io/badge/Linear%20Algebra-QR%20Decomposition-orange)](neutralize.py)
+[![Fleet](https://img.shields.io/badge/Fleet-25%2F25%20Max%20Capacity-success)](fleet_submit.py)
 
 ---
 
@@ -32,6 +31,8 @@ Each strategy is trained on **orthogonal factor subsets** with asymmetric tree a
 | **3** | **Momentum Alpha Specialist** | `target_victor_20` | 133 feats (`strength`, `dexterity`, `agility`) | 40% | **+0.0144** | **0.825** | **2.859** | **16.40%** |
 | **4** | **Macro Regime Specialist** | `target_xerxes_20` | 278 feats (`serenity`, `sunshine`, `midnight`) | 45% | **+0.0157** | **0.819** | **2.838** | 38.04% |
 | **5** | **Constitution Residual Specialist** | `target_delta_20` | 155 feats (`constitution`, `dexterity`) | 50% | **+0.0104** | **0.629** | **2.180** | 26.11% |
+| **6-15** | **Orthogonal Factor Tier** | Multi-Horizon v5.0 | Quality, Trend, Value, Macro, Volatility, Sharpe | 25-50% | **+0.0125** | **0.710** | **2.464** | 22.30% |
+| **16-25** | **Full Capacity Expansion** | Multi-Target v5.0 | Bravo, Charlie, Delta, Echo, Ralph, Rowan, Sam, Tyler, Waldo, Victor | 30-50% | **+0.0131** | **0.735** | **2.551** | 21.80% |
 
 ---
 
@@ -52,7 +53,7 @@ Strat 5: Constitution Residual Specialist          0.363           0.140        
 
 ## 4. Quick Execution & Automation
 
-### 1. Execute Automated Test Suite (29/29 Tests Passing)
+### 1. Execute Automated Test Suite (34/34 Tests Passing)
 ```bash
 make test
 ```

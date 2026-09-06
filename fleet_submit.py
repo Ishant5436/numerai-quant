@@ -120,7 +120,21 @@ def load_feature_groups() -> dict:
         "alpha_conviction": get_subset(["intelligence", "strength", "wisdom"]),
         "volatility_defensive": get_subset(["serenity", "constitution", "rain"]),
         "risk_parity": get_subset(["sunshine", "intelligence", "dexterity"]),
-        "macro_hedged": get_subset(["midnight", "agility", "rain"])
+        "macro_hedged": get_subset(["midnight", "agility", "rain"]),
+        # Expansion groups for strategies 16-30:
+        "fundamental_value": get_subset(["charisma", "wisdom"]),
+        "low_beta_defensive": get_subset(["serenity", "constitution"]),
+        "residual_alpha": get_subset(["constitution", "dexterity"]),
+        "mean_reversion": get_subset(["dexterity", "agility"]),
+        "factor_momentum": get_subset(["strength", "agility"]),
+        "high_sharpe_quality": get_subset(["intelligence", "wisdom"]),
+        "macro_tail_liquidity": get_subset(["midnight", "rain"]),
+        "earnings_quality": get_subset(["charisma", "sunshine"]),
+        "sentiment_divergence": get_subset(["midnight", "serenity"]),
+        "vol_adjusted_alpha": get_subset(["serenity", "strength"]),
+        "orthogonal_risk_parity": get_subset(["sunshine", "intelligence"]),
+        "residual_spread": get_subset(["rain", "dexterity"]),
+        "growth_trend": get_subset(["agility", "charisma"]),
     }
     return groups
 
@@ -131,44 +145,74 @@ def resolve_strategy_config(model_name: str, idx: int) -> tuple[int, str, float]
     Returns (strat_id, feature_group_key, neutralization_proportion).
     Guarantees zero unhandled states, zero uninitialized variables, and clean testability.
     Phase 1: Explicit keyword matches in model name take absolute priority.
-    Phase 2: Fallback to modulo slot routing for generic/unbranded model names.
+    Phase 2: Fallback to modulo 30 slot routing for generic/unbranded model names.
     """
     name_lower = (model_name or "").lower()
 
-    # 1. Explicit keyword matching in model name
-    if "xerxes" in name_lower:
-        return (4, "macro", 0.45)
-    elif "macro_tail" in name_lower or "tail" in name_lower or "sam" in name_lower:
-        return (10, "macro_tail", 0.45)
-    elif "fund" in name_lower or "jeremy" in name_lower:
-        return (2, "fundamental", 0.35)
-    elif "mom" in name_lower or "victor" in name_lower:
-        return (3, "momentum", 0.40)
-    elif "res" in name_lower or "delta" in name_lower:
-        return (5, "constitution", 0.50)
-    elif "cyrus" in name_lower:
-        return (6, "all_medium", 0.30)
-    elif "qual" in name_lower or "def" in name_lower:
-        return (7, "quality_defensive", 0.35)
-    elif "vel" in name_lower or "trend" in name_lower:
-        return (8, "trend_velocity", 0.40)
-    elif "val" in name_lower or "cap" in name_lower:
-        return (9, "value_capital", 0.35)
+    # 1. Explicit keyword matching for 30-model fleet
+    if "supernova" in name_lower:
+        return (30, "all_medium", 0.35)
+    elif "ender" in name_lower:
+        return (29, "all_medium", 0.25)
+    elif "caroline" in name_lower or "caro" in name_lower:
+        return (28, "growth_trend", 0.30)
+    elif "agnes" in name_lower:
+        return (27, "residual_spread", 0.45)
+    elif "claudia" in name_lower:
+        return (26, "orthogonal_risk_parity", 0.35)
+    elif "victor" in name_lower:
+        return (25, "vol_adjusted_alpha", 0.35)
+    elif "waldo" in name_lower:
+        return (24, "sentiment_divergence", 0.40)
+    elif "tyler" in name_lower:
+        return (23, "earnings_quality", 0.35)
+    elif "sam" in name_lower:
+        return (22, "macro_tail_liquidity", 0.45)
+    elif "rowan" in name_lower:
+        return (21, "high_sharpe_quality", 0.30)
+    elif "ralph" in name_lower:
+        return (20, "factor_momentum", 0.35)
+    elif "echo" in name_lower:
+        return (19, "mean_reversion", 0.30)
+    elif "delta" in name_lower:
+        return (18, "residual_alpha", 0.50)
+    elif "charlie" in name_lower:
+        return (17, "low_beta_defensive", 0.40)
+    elif "bravo" in name_lower:
+        return (16, "fundamental_value", 0.35)
     elif "macro_hedged" in name_lower or "hedged" in name_lower:
         return (15, "macro_hedged", 0.50)
-    elif "macro" in name_lower:
-        return (4, "macro", 0.45)
-    elif "alpha" in name_lower:
-        return (11, "alpha_conviction", 0.30)
-    elif "vol" in name_lower:
-        return (12, "volatility_defensive", 0.40)
-    elif "sharpe" in name_lower:
-        return (13, "risk_parity", 0.35)
+    elif "cyrus" in name_lower:
+        return (6, "all_medium", 0.30)
     elif "deep" in name_lower:
         return (14, "all_medium", 0.25)
+    elif "sharpe" in name_lower:
+        return (13, "risk_parity", 0.35)
+    elif "vol" in name_lower:
+        return (12, "volatility_defensive", 0.40)
+    elif "fund" in name_lower or "jeremy" in name_lower:
+        return (2, "fundamental", 0.35)
+    elif "alpha" in name_lower:
+        return (11, "alpha_conviction", 0.30)
+    elif "xerxes" in name_lower:
+        return (4, "macro", 0.45)
+    elif "macro_tail" in name_lower or "tail" in name_lower:
+        return (10, "macro_tail", 0.45)
+    elif "val" in name_lower or "cap" in name_lower:
+        return (9, "value_capital", 0.35)
+    elif "vel" in name_lower or "trend" in name_lower:
+        return (8, "trend_velocity", 0.40)
+    elif "qual" in name_lower or "def" in name_lower:
+        return (7, "quality_defensive", 0.35)
+    elif "res" in name_lower:
+        return (5, "constitution", 0.50)
+    elif "macro" in name_lower:
+        return (4, "macro", 0.45)
+    elif "mom" in name_lower:
+        return (3, "momentum", 0.40)
 
-    # 2. Modulo slot fallback for generic model names
-    slot = idx % 15
+    # 2. Modulo 30 slot fallback for generic model names
+    slot = idx % 30
     slot_map = {
         0: (1, "all_medium", 0.25),
         1: (2, "fundamental", 0.35),
@@ -185,6 +229,21 @@ def resolve_strategy_config(model_name: str, idx: int) -> tuple[int, str, float]
         12: (13, "risk_parity", 0.35),
         13: (14, "all_medium", 0.25),
         14: (15, "macro_hedged", 0.50),
+        15: (16, "fundamental_value", 0.35),
+        16: (17, "low_beta_defensive", 0.40),
+        17: (18, "residual_alpha", 0.50),
+        18: (19, "mean_reversion", 0.30),
+        19: (20, "factor_momentum", 0.35),
+        20: (21, "high_sharpe_quality", 0.30),
+        21: (22, "macro_tail_liquidity", 0.45),
+        22: (23, "earnings_quality", 0.35),
+        23: (24, "sentiment_divergence", 0.40),
+        24: (25, "vol_adjusted_alpha", 0.35),
+        25: (26, "orthogonal_risk_parity", 0.35),
+        26: (27, "residual_spread", 0.45),
+        27: (28, "growth_trend", 0.30),
+        28: (29, "all_medium", 0.25),
+        29: (30, "all_medium", 0.35),
     }
     return slot_map.get(slot, (1, "all_medium", 0.25))
 

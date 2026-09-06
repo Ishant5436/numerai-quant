@@ -52,7 +52,8 @@ def test_blackbox_resolve_strategy_config_coverage():
     expected_strats = {
         0: 1, 1: 2, 2: 3, 3: 4, 4: 5,
         5: 6, 6: 7, 7: 8, 8: 9, 9: 10,
-        10: 11, 11: 12, 12: 13, 13: 14, 14: 15, 15: 1
+        10: 11, 11: 12, 12: 13, 13: 14, 14: 15,
+        15: 16, 29: 30, 30: 1
     }
     for idx, expected_sid in expected_strats.items():
         sid, grp, neut = resolve_strategy_config("generic_model", idx)
@@ -64,11 +65,11 @@ def test_blackbox_resolve_strategy_config_coverage():
         ("cypherpole_fund", 2),
         ("alpha_jeremy_v1", 2),
         ("momentum_bot", 3),
-        ("victor_runner", 3),
+        ("victor_runner", 25),
         ("macro_regime", 4),
         ("xerxes_tail", 4),
         ("res_specialist", 5),
-        ("delta_hedger", 5),
+        ("delta_hedger", 18),
         ("cyrus_deep", 6),
         ("quality_defensive", 7),
         ("trend_vel", 8),
