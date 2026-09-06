@@ -3,7 +3,7 @@
 > **Statistically Independent, Multi-Factor Machine Learning Fleet for Numerai Tournament v5.0 & Signals v3 Supernova**  
 > *Optimized for Apple Silicon ARM64 (M5 Pro) with Sub-Factor Mining & Linear Feature Neutralization*
 
-[![Tests](https://img.shields.io/badge/Tests-26%2F26%20Passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-29%2F29%20Passed-brightgreen)](tests/)
 [![Tournament](https://img.shields.io/badge/Tournament-v5.0%20Ender%2060D-blue)](config.py)
 [![Signals](https://img.shields.io/badge/Signals-v3%20Supernova-purple)](signals/)
 [![Linear Algebra](https://img.shields.io/badge/Linear%20Algebra-QR%20Decomposition-orange)](neutralize.py)
@@ -52,7 +52,7 @@ Strat 5: Constitution Residual Specialist          0.363           0.140        
 
 ## 4. Quick Execution & Automation
 
-### 1. Execute Automated Test Suite (15/15 Tests Passing)
+### 1. Execute Automated Test Suite (29/29 Tests Passing)
 ```bash
 make test
 ```
@@ -71,3 +71,11 @@ make test
 * Runs every **Sunday at 02:00 IST / 20:30 UTC Saturday** via `cron_submit.sh`.
 * Perfectly timed ~2.5 hours after the Numerai round opening window (Saturday 18:00 UTC).
 * Logs to `logs/fleet_submit.log` with automatic 3x retry on network drop and native notifications.
+
+---
+
+## 5. Tournament Resolution Horizon & Scoring Lifecycle
+
+* **Validation Baselines vs. Live Scoring:** The performance figures reported in Section 2 represent out-of-sample cross-validation benchmarks evaluated across historical resolved eras ($4,120,000+$ rows).
+* **20-Day Resolution Window:** Numerai Classic targets operate on a 20-day return horizon (trading days 4 through 24 following round submission).
+* **Live Fleet Tracking:** Live rounds (such as Round 1349 submitted across all 15 orthogonal models on September 6, 2026) accumulate scores incrementally across the 20-day resolution window; preliminary score updates begin on trading day 4 and finalize on day 24.
