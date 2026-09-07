@@ -15,7 +15,8 @@ from starlette.routing import Route
 import uvicorn
 
 load_dotenv(os.path.expanduser("~/.env"))
-METRICS_JSON = "/Users/ishantpanchal/numerai-quant/metrics.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+METRICS_JSON = os.path.join(BASE_DIR, "metrics.json")
 
 DEFAULT_STRATEGIES = [
     {

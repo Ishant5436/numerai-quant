@@ -5,7 +5,7 @@ Numerai Multi-Target Alpha Ensemble Training Engine
 - Trains 4 specialized LightGBM models on distinct market targets
 - Computes out-of-sample Spearman Correlation, Raw Era Sharpe, and Drawdown
 - Evaluates blended & neutralized ensemble performance
-- Persists all model weights to /Users/ishantpanchal/numerai-quant/models/
+- Persists all model weights to models/
 """
 
 import os

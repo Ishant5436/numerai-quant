@@ -2,14 +2,15 @@
 # Autonomous Weekly Numerai Fleet Submitter & Fail-Safe Watchdog
 set -euo pipefail
 
-LOG_FILE="/Users/ishantpanchal/numerai-quant/logs/fleet_submit.log"
-PYTHON_BIN="/Users/ishantpanchal/numerai-quant/venv/bin/python"
-SCRIPT_PATH="/Users/ishantpanchal/numerai-quant/fleet_submit.py"
-SIGNALS_PATH="/Users/ishantpanchal/numerai-quant/signals/signals_pipeline.py"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_FILE="$SCRIPT_DIR/logs/fleet_submit.log"
+PYTHON_BIN="$SCRIPT_DIR/venv/bin/python"
+SCRIPT_PATH="$SCRIPT_DIR/fleet_submit.py"
+SIGNALS_PATH="$SCRIPT_DIR/signals/signals_pipeline.py"
 LOCK_DIR="/tmp/numerai_fleet_submit.lockdir"
 PID_FILE="$LOCK_DIR/pid"
 
-cd /Users/ishantpanchal/numerai-quant
+cd "$SCRIPT_DIR"
 
 # Atomic concurrency guard: POSIX mkdir is atomic (no TOCTOU window)
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then

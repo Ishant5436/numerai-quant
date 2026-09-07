@@ -20,8 +20,9 @@ from config import (
 )
 from neutralize import neutralize, rank_01
 
-TAIL_DIR = "/Users/ishantpanchal/numerai-quant/models/tail_specialist"
-RESIDUAL_DIR = "/Users/ishantpanchal/numerai-quant/models/residual_specialist"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TAIL_DIR = os.path.join(BASE_DIR, "models/tail_specialist")
+RESIDUAL_DIR = os.path.join(BASE_DIR, "models/residual_specialist")
 os.makedirs(TAIL_DIR, exist_ok=True)
 os.makedirs(RESIDUAL_DIR, exist_ok=True)
 

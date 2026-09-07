@@ -18,7 +18,8 @@ from scipy.stats import spearmanr
 from config import FEATURES_JSON, DATA_DIR
 from neutralize import neutralize, rank_01
 
-ORTHO_DIR = "/Users/ishantpanchal/numerai-quant/models/orthogonal_fleet"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ORTHO_DIR = os.path.join(BASE_DIR, "models/orthogonal_fleet")
 os.makedirs(ORTHO_DIR, exist_ok=True)
 
 
@@ -199,9 +200,10 @@ def main():
         "correlation_matrix": corr_matrix.values.tolist(),
         "strategy_names": [f"Strat {c['id']} ({c['badge']})" for c in configs]
     }
-    with open("/Users/ishantpanchal/numerai-quant/metrics.json", "w") as f:
+    metrics_path = os.path.join(BASE_DIR, "metrics.json")
+    with open(metrics_path, "w") as f:
         json.dump(metrics_payload, f, indent=2)
-    print("\n[SAVE]  Saved truly orthogonal metrics to /Users/ishantpanchal/numerai-quant/metrics.json!\n")
+    print(f"\n[SAVE]  Saved truly orthogonal metrics to {metrics_path}!\n")
 
 
 if __name__ == "__main__":

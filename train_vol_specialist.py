@@ -4,7 +4,7 @@ Strategy 2: High-MMC Volatility & Orthogonal Alpha Specialist
 - Trains on pure volatility-adjusted and residual targets:
   'target_victor_20', 'target_xerxes_20', 'target_delta_20'
 - Uses 50% aggressive feature neutralization for maximum Meta-Model Contribution (MMC)
-- Saved to /Users/ishantpanchal/numerai-quant/models/vol_specialist/
+- Saved to models/vol_specialist/
 """
 
 import os
@@ -22,7 +22,8 @@ from config import (
 )
 from neutralize import neutralize, rank_01
 
-VOL_MODEL_DIR = "/Users/ishantpanchal/numerai-quant/models/vol_specialist"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+VOL_MODEL_DIR = os.path.join(BASE_DIR, "models/vol_specialist")
 os.makedirs(VOL_MODEL_DIR, exist_ok=True)
 
 VOL_TARGETS = [

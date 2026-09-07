@@ -16,11 +16,12 @@ from scipy.stats import spearmanr
 from config import FEATURE_SET, FEATURES_JSON, DATA_DIR, MODEL_DIR
 from neutralize import neutralize, rank_01
 
-VOL_DIR = "/Users/ishantpanchal/numerai-quant/models/vol_specialist"
-ALPHA_DIR = "/Users/ishantpanchal/numerai-quant/models/alpha_specialist"
-TAIL_DIR = "/Users/ishantpanchal/numerai-quant/models/tail_specialist"
-RESIDUAL_DIR = "/Users/ishantpanchal/numerai-quant/models/residual_specialist"
-METRICS_JSON = "/Users/ishantpanchal/numerai-quant/metrics.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+VOL_DIR = os.path.join(BASE_DIR, "models/vol_specialist")
+ALPHA_DIR = os.path.join(BASE_DIR, "models/alpha_specialist")
+TAIL_DIR = os.path.join(BASE_DIR, "models/tail_specialist")
+RESIDUAL_DIR = os.path.join(BASE_DIR, "models/residual_specialist")
+METRICS_JSON = os.path.join(BASE_DIR, "metrics.json")
 
 
 def get_feature_list() -> list:

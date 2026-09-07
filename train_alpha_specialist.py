@@ -4,7 +4,7 @@ Strategy 3: Quality Momentum & Residual Alpha Specialist
 - Trains on orthogonal factor horizons:
   'target_jeremy_20' (Quality Momentum) and 'target_agnes_20' (Residual factor returns)
 - Applies 35% linear feature neutralization to isolate pure idiosyncratic alpha
-- Saved to /Users/ishantpanchal/numerai-quant/models/alpha_specialist/
+- Saved to models/alpha_specialist/
 """
 
 import os
@@ -22,7 +22,8 @@ from config import (
 )
 from neutralize import neutralize, rank_01
 
-ALPHA_MODEL_DIR = "/Users/ishantpanchal/numerai-quant/models/alpha_specialist"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ALPHA_MODEL_DIR = os.path.join(BASE_DIR, "models/alpha_specialist")
 os.makedirs(ALPHA_MODEL_DIR, exist_ok=True)
 
 ALPHA_TARGETS = [

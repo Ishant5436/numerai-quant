@@ -11,7 +11,10 @@ import pandas as pd
 from datetime import datetime
 
 import sys
-sys.path.insert(0, "/Users/ishantpanchal/numerai-quant")
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 from signals.signals_config import (
     SIGNALS_DATA_DIR,
     REPRESENTATIVE_TICKERS,

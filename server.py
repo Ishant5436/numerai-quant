@@ -64,9 +64,12 @@ def numerai_submit(model_name: Optional[str] = None) -> Dict[str, Any]:
         model_name: Optional target model name (defaults to active account model).
     """
     try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        venv_python = os.path.join(base_dir, "venv/bin/python")
+        python_bin = venv_python if os.path.exists(venv_python) else sys.executable
         cmd = [
-            "/Users/ishantpanchal/numerai-quant/venv/bin/python",
-            "/Users/ishantpanchal/numerai-quant/fleet_submit.py"
+            python_bin,
+            os.path.join(base_dir, "fleet_submit.py")
         ]
         env = os.environ.copy()
         if model_name:
