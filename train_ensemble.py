@@ -24,7 +24,7 @@ from config import (
     LGB_PARAMS,
     NEUTRALIZATION_PROPORTION
 )
-from neutralize import neutralize, rank_01
+from neutralize import neutralize
 
 os.makedirs(MODEL_DIR, exist_ok=True)
 
@@ -43,7 +43,7 @@ def calculate_era_correlation(df: pd.DataFrame, pred_col: str, target_col: str =
 
 def main():
     features = get_feature_list()
-    print(f"=== Numerai Alpha Ensemble Pipeline (v5.0) ===")
+    print("=== Numerai Alpha Ensemble Pipeline (v5.0) ===")
     print(f"Feature set: '{FEATURE_SET}' ({len(features)} features)")
     print(f"Ensemble targets: {ENSEMBLE_TARGETS}")
 
@@ -131,7 +131,7 @@ def main():
     max_dd = (corrs_neutral.cumsum().cummax() - corrs_neutral.cumsum()).max()
 
     print("\n" + "="*60)
-    print(f"[GUARD]   NEUTRALIZED ALPHA ENSEMBLE AUDIT SUMMARY")
+    print("[GUARD]   NEUTRALIZED ALPHA ENSEMBLE AUDIT SUMMARY")
     print("="*60)
     print(f"• Mean Era Correlation (Corr20v2) : {mean_neut:.4f}")
     print(f"• Raw Per-Era Sharpe (μ/σ)        : {raw_sharpe_neut:.3f} (Leaderboard Standard)")

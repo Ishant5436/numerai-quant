@@ -20,7 +20,7 @@ from scipy.stats import spearmanr
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import FEATURES_JSON, DATA_DIR
-from neutralize import neutralize, rank_01
+from neutralize import neutralize
 
 ORTHO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "orthogonal_fleet")
 os.makedirs(ORTHO_DIR, exist_ok=True)

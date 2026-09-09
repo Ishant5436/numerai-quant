@@ -10,7 +10,7 @@ demo:
 	@echo "=== Numerai Quant: 12/12 Passing with Closed-Form Linear Neutralization ==="
 
 lint:
-	./venv/bin/python -m flake8 . --count --max-line-length=120 --statistics || true
+	/Users/ishantpanchal/.local/bin/ruff check .
 
 clean:
 	rm -rf __pycache__ .pytest_cache

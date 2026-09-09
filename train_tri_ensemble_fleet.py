@@ -18,7 +18,7 @@ import xgboost as xgb
 from catboost import CatBoostRegressor
 from scipy.stats import spearmanr
 from config import FEATURES_JSON, DATA_DIR
-from neutralize import neutralize, rank_01
+from neutralize import neutralize
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TRI_DIR = os.path.join(BASE_DIR, "models/tri_ensemble_fleet")

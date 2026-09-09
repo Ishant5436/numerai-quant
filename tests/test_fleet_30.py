@@ -12,7 +12,6 @@ from scipy.stats import spearmanr
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from fleet_submit import load_feature_groups, resolve_strategy_config, generate_tri_ensemble_prediction
-from neutralize import rank_01
 
 
 @pytest.fixture

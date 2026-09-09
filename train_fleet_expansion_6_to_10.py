@@ -20,7 +20,7 @@ from scipy.stats import spearmanr
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import FEATURES_JSON, DATA_DIR
-from neutralize import neutralize, rank_01
+from neutralize import neutralize
 
 ORTHO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "orthogonal_fleet")
 os.makedirs(ORTHO_DIR, exist_ok=True)
@@ -58,7 +58,7 @@ def main():
     print("=" * 80)
     print("[RESEARCH]  NUMERAI FLEET EXPANSION ENGINE: STRATEGIES 6 - 10")
     print("=" * 80)
-    print(f"Feature Partitions:")
+    print("Feature Partitions:")
     print(f"  • Strategy 6  (Deep Horizon)     : {len(groups['all_medium'])} features (All Medium)")
     print(f"  • Strategy 7  (Defensive Quality): {len(groups['quality_defensive'])} features (serenity, wisdom, intelligence)")
     print(f"  • Strategy 8  (Trend Velocity)   : {len(groups['trend_velocity'])} features (agility, strength, sunshine)")

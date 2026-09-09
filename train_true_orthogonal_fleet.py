@@ -16,7 +16,7 @@ import pandas as pd
 import lightgbm as lgb
 from scipy.stats import spearmanr
 from config import FEATURES_JSON, DATA_DIR
-from neutralize import neutralize, rank_01
+from neutralize import neutralize
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ORTHO_DIR = os.path.join(BASE_DIR, "models/orthogonal_fleet")
@@ -55,7 +55,7 @@ def main():
     print("=" * 75)
     print("[RESEARCH]  NUMERAI TRUE ORTHOGONAL ALPHA MINING ENGINE")
     print("=" * 75)
-    print(f"[AUDIT]  Feature Partitions (Filtered to Medium Universe):")
+    print("[AUDIT]  Feature Partitions (Filtered to Medium Universe):")
     print(f"  • Strategy 1 (Core All): {len(groups['all_medium'])} features")
     print(f"  • Strategy 2 (Fundamental): {len(groups['fundamental'])} features (intelligence, charisma, wisdom)")
     print(f"  • Strategy 3 (Momentum): {len(groups['momentum'])} features (strength, dexterity, agility)")

@@ -8,7 +8,6 @@ Train Strategies 4 & 5:
 import os
 import json
 import joblib
-import numpy as np
 import pandas as pd
 import lightgbm as lgb
 from scipy.stats import spearmanr
@@ -18,7 +17,7 @@ from config import (
     DATA_DIR,
     LGB_PARAMS
 )
-from neutralize import neutralize, rank_01
+from neutralize import neutralize
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TAIL_DIR = os.path.join(BASE_DIR, "models/tail_specialist")

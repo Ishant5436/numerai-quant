@@ -5,7 +5,6 @@ and formats official tournament submission files.
 """
 
 import os
-import json
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -15,15 +14,15 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
-from signals.signals_config import (
+from signals.signals_config import (  # noqa: E402
     SIGNALS_DATA_DIR,
     REPRESENTATIVE_TICKERS,
     FACTOR_WEIGHTS,
     NEUTRALIZATION_PROPORTION
 )
-from signals.alpha_factors import SupernovaAlphaGenerator, rank_01
-from signals.live_data_fetcher import fetch_ohlcv_history, DataFetchError
-from neutralize import neutralize
+from signals.alpha_factors import SupernovaAlphaGenerator  # noqa: E402
+from signals.live_data_fetcher import fetch_ohlcv_history, DataFetchError  # noqa: E402
+from neutralize import neutralize  # noqa: E402
 
 
 class SupernovaSignalsPipeline:
@@ -78,7 +77,7 @@ class SupernovaSignalsPipeline:
         for ticker in self.tickers:
             try:
                 history = self.get_market_history(ticker, bars=252)
-            except DataFetchError as e:
+            except DataFetchError:
                 # One bad ticker (delisted, rate-limited, no cache yet)
                 # should not abort the whole universe's run.
                 skipped_tickers.append(ticker)

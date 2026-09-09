@@ -7,6 +7,7 @@ Provides MCP tools for:
 """
 
 import os
+import sys
 import subprocess
 from typing import Any, Dict, Optional
 from numerapi import NumerAPI

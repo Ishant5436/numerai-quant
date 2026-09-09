@@ -4,7 +4,6 @@ Focuses on mathematical invariants of rank_01 percentile transforms,
 linear feature neutralization projections, and ensemble weight constraints.
 """
 
-import pytest
 import numpy as np
 import pandas as pd
 from neutralize import rank_01, neutralize

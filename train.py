@@ -11,7 +11,6 @@ Numerai ML Training Engine
 import os
 import json
 import joblib
-import numpy as np
 import pandas as pd
 import lightgbm as lgb
 from scipy.stats import spearmanr

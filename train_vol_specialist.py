@@ -10,7 +10,6 @@ Strategy 2: High-MMC Volatility & Orthogonal Alpha Specialist
 import os
 import json
 import joblib
-import numpy as np
 import pandas as pd
 import lightgbm as lgb
 from scipy.stats import spearmanr
@@ -20,7 +19,7 @@ from config import (
     DATA_DIR,
     LGB_PARAMS
 )
-from neutralize import neutralize, rank_01
+from neutralize import neutralize
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 VOL_MODEL_DIR = os.path.join(BASE_DIR, "models/vol_specialist")
@@ -48,7 +47,7 @@ def calculate_era_correlation(df: pd.DataFrame, pred_col: str, target_col: str =
 
 def main():
     features = get_feature_list()
-    print(f"=== Numerai Volatility & MMC Specialist Pipeline ===")
+    print("=== Numerai Volatility & MMC Specialist Pipeline ===")
     print(f"Features: {len(features)} | Targets: {VOL_TARGETS}")
 
     train_path = os.path.join(DATA_DIR, "train.parquet")
@@ -106,7 +105,7 @@ def main():
     max_dd = (corrs_neutral.cumsum().cummax() - corrs_neutral.cumsum()).max()
 
     print("\n" + "="*60)
-    print(f"[GUARD]   VOLATILITY / MMC SPECIALIST AUDIT SUMMARY")
+    print("[GUARD]   VOLATILITY / MMC SPECIALIST AUDIT SUMMARY")
     print("="*60)
     print(f"• Mean Era Correlation (Corr20v2) : {mean_neut:.4f}")
     print(f"• Raw Per-Era Sharpe (μ/σ)        : {sharpe_neut:.3f}")

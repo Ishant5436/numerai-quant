@@ -20,7 +20,7 @@ from config import (
     DATA_DIR,
     LGB_PARAMS
 )
-from neutralize import neutralize, rank_01
+from neutralize import neutralize
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ALPHA_MODEL_DIR = os.path.join(BASE_DIR, "models/alpha_specialist")

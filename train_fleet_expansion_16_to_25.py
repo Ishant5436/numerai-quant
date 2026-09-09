@@ -18,14 +18,12 @@ import os
 import sys
 import json
 import joblib
-import numpy as np
 import pandas as pd
 import lightgbm as lgb
 from scipy.stats import spearmanr
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from config import FEATURES_JSON, DATA_DIR
-from neutralize import neutralize, rank_01
 
 ORTHO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models", "orthogonal_fleet")
 os.makedirs(ORTHO_DIR, exist_ok=True)
@@ -74,7 +72,6 @@ def main():
             print(f"  • {g_name:24s}: {len(g_feats)} features")
 
     train_path = os.path.join(DATA_DIR, "train.parquet")
-    val_path = os.path.join(DATA_DIR, "validation.parquet")
 
     targets = [
         "target_bravo_20",
