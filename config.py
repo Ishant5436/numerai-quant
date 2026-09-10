@@ -39,6 +39,35 @@ os.makedirs(ORTHO_60D_DIR, exist_ok=True)
 TARGET_COL = "target"
 MODEL_PATH = os.path.join(MODEL_DIR, "lgb_target.pkl")
 
+# Deterministic Explicit Model Routing for all 25 registered Numerai account models
+EXPLICIT_MODEL_ROUTING = {
+    "cypherpole": 1,
+    "cypherpole_fund": 2,
+    "cypherpole_mom": 3,
+    "cypherpole_macro": 4,
+    "cypherpole_res": 5,
+    "cypherpole_cyrus": 6,
+    "cypherpole_qual": 7,
+    "cypherpole_vel": 8,
+    "cypherpole_val": 9,
+    "cypherpole_tail": 10,
+    "cypherpole_alpha": 11,
+    "cypherpole_vol": 12,
+    "cypherpole_sharpe": 13,
+    "cypherpole_deep": 14,
+    "cypherpole_hedged": 15,
+    "cypherpole_bravo": 16,
+    "cypherpole_charlie": 17,
+    "cypherpole_delta": 18,
+    "cypherpole_echo": 19,
+    "cypherpole_ralph": 20,
+    "cypherpole_rowan": 21,
+    "cypherpole_sam": 22,
+    "cypherpole_tyler": 23,
+    "cypherpole_waldo": 24,
+    "cypherpole_victor": 25,
+}
+
 # Complete 25-Strategy 60-Day Fleet Architecture Mapping
 # Format: strat_id -> (target_name, feature_group_key, default_neutralization_proportion)
 FLEET_STRATEGY_MAP_60D = {

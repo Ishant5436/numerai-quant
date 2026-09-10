@@ -18,7 +18,13 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 from numerapi import NumerAPI
-from config import FEATURES_JSON, DATA_DIR, ORTHO_60D_DIR
+from config import (
+    DATA_DIR,
+    EXPLICIT_MODEL_ROUTING,
+    FEATURES_JSON,
+    FLEET_STRATEGY_MAP_60D,
+    ORTHO_60D_DIR,
+)
 from neutralize import neutralize, rank_01
 
 load_dotenv(os.path.expanduser("~/.env"))
@@ -114,28 +120,28 @@ def load_feature_groups() -> dict:
         "fundamental": get_subset(["intelligence", "charisma", "wisdom"]),
         "momentum": get_subset(["strength", "dexterity", "agility"]),
         "macro": get_subset(["serenity", "sunshine", "midnight"]),
-        "constitution": get_subset(["constitution", "dexterity"]),
+        "constitution": get_subset(["constitution"]),
         "quality_defensive": get_subset(["serenity", "wisdom", "intelligence"]),
         "trend_velocity": get_subset(["agility", "strength", "sunshine"]),
         "value_capital": get_subset(["charisma", "wisdom", "constitution"]),
-        "macro_tail": get_subset(["midnight", "rain", "serenity"]),
+        "macro_tail": get_subset(["midnight", "serenity"]),
         "alpha_conviction": get_subset(["intelligence", "strength", "wisdom"]),
-        "volatility_defensive": get_subset(["serenity", "constitution", "rain"]),
+        "volatility_defensive": get_subset(["serenity", "dexterity", "wisdom"]),
         "risk_parity": get_subset(["sunshine", "intelligence", "dexterity"]),
-        "macro_hedged": get_subset(["midnight", "agility", "rain"]),
-        # Expansion groups for strategies 16-30:
-        "fundamental_value": get_subset(["charisma", "wisdom"]),
+        "macro_hedged": get_subset(["midnight", "agility", "serenity"]),
+        # Expansion groups for strategies 16-30 (guaranteed pairwise Jaccard < 0.85):
+        "fundamental_value": get_subset(["charisma", "dexterity"]),
         "low_beta_defensive": get_subset(["serenity", "constitution"]),
-        "residual_alpha": get_subset(["constitution", "dexterity"]),
+        "residual_alpha": get_subset(["constitution", "agility"]),
         "mean_reversion": get_subset(["dexterity", "agility"]),
         "factor_momentum": get_subset(["strength", "agility"]),
         "high_sharpe_quality": get_subset(["intelligence", "wisdom"]),
-        "macro_tail_liquidity": get_subset(["midnight", "rain"]),
+        "macro_tail_liquidity": get_subset(["midnight", "strength"]),
         "earnings_quality": get_subset(["charisma", "sunshine"]),
-        "sentiment_divergence": get_subset(["midnight", "serenity"]),
+        "sentiment_divergence": get_subset(["midnight", "serenity", "charisma"]),
         "vol_adjusted_alpha": get_subset(["serenity", "strength"]),
-        "orthogonal_risk_parity": get_subset(["sunshine", "intelligence"]),
-        "residual_spread": get_subset(["rain", "dexterity"]),
+        "orthogonal_risk_parity": get_subset(["sunshine", "agility"]),
+        "residual_spread": get_subset(["dexterity", "wisdom"]),
         "growth_trend": get_subset(["agility", "charisma"]),
     }
     return groups
@@ -146,10 +152,18 @@ def resolve_strategy_config(model_name: str, idx: int) -> tuple[int, str, float]
     Deterministically maps a model name and index to its orthogonal strategy specification:
     Returns (strat_id, feature_group_key, neutralization_proportion).
     Guarantees zero unhandled states, zero uninitialized variables, and clean testability.
-    Phase 1: Explicit keyword matches in model name take absolute priority.
+    Phase 0: Explicit model dictionary lookup takes highest priority (exact identity match).
+    Phase 1: Explicit keyword matches in model name take secondary priority.
     Phase 2: Fallback to modulo 30 slot routing for generic/unbranded model names.
     """
-    name_lower = (model_name or "").lower()
+    name_lower = (model_name or "").lower().strip()
+
+    # 0. Deterministic explicit model dictionary lookup takes absolute priority
+    if name_lower in EXPLICIT_MODEL_ROUTING:
+        strat_id = EXPLICIT_MODEL_ROUTING[name_lower]
+        if strat_id in FLEET_STRATEGY_MAP_60D:
+            _, feat_key, neut_prop = FLEET_STRATEGY_MAP_60D[strat_id]
+            return (strat_id, feat_key, neut_prop)
 
     # 1. Explicit keyword matching for 30-model fleet
     if "supernova" in name_lower:
