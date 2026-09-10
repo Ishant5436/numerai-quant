@@ -188,9 +188,10 @@ def main():
     print(f"• Peak-to-Trough Max Drawdown     : {metrics['max_drawdown']*100:.2f}%")
     print("=" * 60)
 
-    # 95th Percentile Quality Gate Assertion
-    assert metrics["raw_era_sharpe"] >= 1.05, f"Quality Gate Failure: Sharpe {metrics['raw_era_sharpe']} < 1.05"
-    print("[PASS] 95th+ Percentile Quality Gate Satisfied!")
+    # 95th Percentile Quality Gate & Risk Gate Assertions
+    assert metrics["raw_era_sharpe"] >= 1.15, f"Quality Gate Failure: Sharpe {metrics['raw_era_sharpe']} < 1.15"
+    assert metrics["max_drawdown"] <= 0.40, f"Risk Gate Failure: 647-era Max Drawdown {metrics['max_drawdown']} > 0.40"
+    print("[PASS] 95th+ Percentile Quality Gate & Risk Invariants Satisfied!")
 
 
 if __name__ == "__main__":

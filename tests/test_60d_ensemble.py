@@ -100,3 +100,17 @@ def test_generate_predictions_with_60d_ensemble_fallback():
     assert not np.isnan(preds).any()
     assert np.all(preds >= 0.0)
     assert np.all(preds <= 1.0)
+
+
+def test_60d_serialized_model_artifacts_exist():
+    """Verify that all 5 trained 60-day LightGBM models exist and have valid structure."""
+    import joblib
+    from config import ENSEMBLE_TARGETS_60D, MODEL_60D_DIR
+
+    for target in ENSEMBLE_TARGETS_60D:
+        model_path = os.path.join(MODEL_60D_DIR, f"lgb_{target}.pkl")
+        assert os.path.exists(model_path), f"Missing model: {model_path}"
+        assert os.path.getsize(model_path) > 10_000, f"Model file too small: {model_path}"
+        model = joblib.load(model_path)
+        assert hasattr(model, "predict"), f"Loaded object missing predict method: {target}"
+
