@@ -8,8 +8,12 @@ import os
 SIGNALS_DIR = os.path.dirname(os.path.abspath(__file__))
 SIGNALS_DATA_DIR = os.path.join(SIGNALS_DIR, "data")
 SIGNALS_MODEL_DIR = os.path.join(SIGNALS_DIR, "models")
-os.makedirs(SIGNALS_DATA_DIR, exist_ok=True)
-os.makedirs(SIGNALS_MODEL_DIR, exist_ok=True)
+
+
+def ensure_directories() -> None:
+    """Ensure data and model directories exist without top-level import side effects."""
+    os.makedirs(SIGNALS_DATA_DIR, exist_ok=True)
+    os.makedirs(SIGNALS_MODEL_DIR, exist_ok=True)
 
 # Universe of representative global liquid equities for multi-factor alpha computation
 REPRESENTATIVE_TICKERS = [

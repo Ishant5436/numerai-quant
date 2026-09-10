@@ -18,7 +18,6 @@ from signals.signals_config import SIGNALS_DATA_DIR
 logger = logging.getLogger(__name__)
 
 CACHE_DIR = os.path.join(SIGNALS_DATA_DIR, "cache")
-os.makedirs(CACHE_DIR, exist_ok=True)
 
 REQUIRED_COLUMNS = ["close", "high", "low", "volume"]
 MIN_USABLE_BARS = 50  # matches SupernovaAlphaGenerator.compute_factors_for_series
@@ -50,6 +49,7 @@ def _load_cache(ticker: str) -> pd.DataFrame | None:
 
 def _save_cache(ticker: str, df: pd.DataFrame) -> None:
     try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
         df.to_parquet(_cache_path(ticker))
     except Exception as e:
         # Cache write failures must never break a live fetch that already

@@ -10,7 +10,8 @@ demo:
 	@echo "=== Numerai Quant: 12/12 Passing with Closed-Form Linear Neutralization ==="
 
 lint:
-	/Users/ishantpanchal/.local/bin/ruff check .
+	uv run ruff check .
 
 clean:
-	rm -rf __pycache__ .pytest_cache
+	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	rm -rf .pytest_cache .ruff_cache

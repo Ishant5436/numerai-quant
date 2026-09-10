@@ -18,7 +18,8 @@ from signals.signals_config import (  # noqa: E402
     SIGNALS_DATA_DIR,
     REPRESENTATIVE_TICKERS,
     FACTOR_WEIGHTS,
-    NEUTRALIZATION_PROPORTION
+    NEUTRALIZATION_PROPORTION,
+    ensure_directories,
 )
 from signals.alpha_factors import SupernovaAlphaGenerator  # noqa: E402
 from signals.live_data_fetcher import fetch_ohlcv_history, DataFetchError  # noqa: E402
@@ -27,6 +28,7 @@ from neutralize import neutralize  # noqa: E402
 
 class SupernovaSignalsPipeline:
     def __init__(self, tickers: list = None, use_live_data: bool = True):
+        ensure_directories()
         self.tickers = tickers or REPRESENTATIVE_TICKERS
         self.alpha_gen = SupernovaAlphaGenerator(FACTOR_WEIGHTS)
         self.use_live_data = use_live_data
