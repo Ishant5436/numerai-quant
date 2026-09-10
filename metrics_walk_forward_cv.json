@@ -1,0 +1,54 @@
+{
+  "mean_cv_spearman": 0.02916,
+  "mean_cv_sharpe": 1.409,
+  "folds": {
+    "1": {
+      "name": "Early Regime (2013-2016)",
+      "start_era": "0575",
+      "end_era": "0739",
+      "mean_corr": 0.04107,
+      "std_corr": 0.01909,
+      "raw_era_sharpe": 2.151,
+      "ann_sharpe": 15.51,
+      "max_drawdown": 0.0565,
+      "hit_rate": 0.968,
+      "n_eras": 157
+    },
+    "2": {
+      "name": "Crisis & Shock (2017-2020)",
+      "start_era": "0740",
+      "end_era": "0904",
+      "mean_corr": 0.02962,
+      "std_corr": 0.01924,
+      "raw_era_sharpe": 1.54,
+      "ann_sharpe": 11.1,
+      "max_drawdown": 0.0893,
+      "hit_rate": 0.924,
+      "n_eras": 157
+    },
+    "3": {
+      "name": "Post-Pandemic Inflation (2020-2023)",
+      "start_era": "0905",
+      "end_era": "1069",
+      "mean_corr": 0.03117,
+      "std_corr": 0.02501,
+      "raw_era_sharpe": 1.246,
+      "ann_sharpe": 8.99,
+      "max_drawdown": 0.0781,
+      "hit_rate": 0.879,
+      "n_eras": 157
+    },
+    "4": {
+      "name": "Modern Dispersion (2023-2026)",
+      "start_era": "1070",
+      "end_era": "1234",
+      "mean_corr": 0.01476,
+      "std_corr": 0.0211,
+      "raw_era_sharpe": 0.7,
+      "ann_sharpe": 5.04,
+      "max_drawdown": 0.3432,
+      "hit_rate": 0.694,
+      "n_eras": 144
+    }
+  }
+}

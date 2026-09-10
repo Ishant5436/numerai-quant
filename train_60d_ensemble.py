@@ -139,12 +139,25 @@ def evaluate_60d_ensemble(val_path: str, models: dict, features: list, fncv3_fea
     cumsum = corr_neut.cumsum()
     max_dd = float((cumsum.cummax() - cumsum).max())
 
+    # Calculate Rolling 1-Year (52-era) Drawdowns
+    window = 52
+    rolling_dds = []
+    if len(corr_neut) >= window:
+        for i in range(len(corr_neut) - window + 1):
+            w = corr_neut.iloc[i : i + window]
+            c = w.cumsum()
+            rolling_dds.append(float((c.cummax() - c).max()))
+    mean_rolling_dd = float(np.mean(rolling_dds)) if rolling_dds else max_dd
+    max_rolling_dd = float(np.max(rolling_dds)) if rolling_dds else max_dd
+
     metrics = {
         "mean_corr": mean_neut,
         "std_corr": std_neut,
         "raw_era_sharpe": raw_sharpe,
         "ann_sharpe": ann_sharpe,
         "max_drawdown": max_dd,
+        "mean_rolling_dd": mean_rolling_dd,
+        "max_rolling_dd": max_rolling_dd,
     }
     return metrics
 
@@ -185,12 +198,16 @@ def main():
     print(f"• Mean Era Correlation (corr60)   : {metrics['mean_corr']:+.4f}")
     print(f"• Raw Per-Era Sharpe (mu/sigma)   : {metrics['raw_era_sharpe']:+.3f} (Leaderboard Standard)")
     print(f"• Annualized Sharpe (Monthly sq12): {metrics['ann_sharpe']:+.2f}")
-    print(f"• Peak-to-Trough Max Drawdown     : {metrics['max_drawdown']*100:.2f}%")
+    print(f"• Peak-to-Trough Max Drawdown     : {metrics['max_drawdown']*100:.2f}% (647-era cumulative)")
+    print(f"• Mean Rolling 1-Year Drawdown    : {metrics['mean_rolling_dd']*100:.2f}%")
+    print(f"• Max Rolling 1-Year Drawdown     : {metrics['max_rolling_dd']*100:.2f}% (Spec Gate <= 16.0%)")
     print("=" * 60)
 
     # 95th Percentile Quality Gate & Risk Gate Assertions
     assert metrics["raw_era_sharpe"] >= 1.15, f"Quality Gate Failure: Sharpe {metrics['raw_era_sharpe']} < 1.15"
     assert metrics["max_drawdown"] <= 0.40, f"Risk Gate Failure: 647-era Max Drawdown {metrics['max_drawdown']} > 0.40"
+    assert metrics["max_rolling_dd"] <= 0.16, f"Risk Gate Failure: Max Rolling 1-Year Drawdown {metrics['max_rolling_dd']} > 0.16"
+    assert metrics["mean_rolling_dd"] <= 0.08, f"Risk Gate Failure: Mean Rolling 1-Year Drawdown {metrics['mean_rolling_dd']} > 0.08"
     print("[PASS] 95th+ Percentile Quality Gate & Risk Invariants Satisfied!")
 
 
