@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 from numerapi import NumerAPI
-from config import FEATURES_JSON, DATA_DIR
+from config import FEATURES_JSON, DATA_DIR, ORTHO_60D_DIR
 from neutralize import neutralize, rank_01
 
 load_dotenv(os.path.expanduser("~/.env"))
@@ -278,7 +278,21 @@ def generate_tri_ensemble_prediction(live_df: pd.DataFrame, strat_id: int, featu
                     return rank_01(live_copy["pred"].values)
                 raise e
 
-    # 2. Existing Tri-Ensemble Fleet (LightGBM + XGBoost + CatBoost)
+    # 2. 60-Day Dedicated Orthogonal Fleet Priority (Strategies 2..25)
+    ortho_60d_path = os.path.join(ORTHO_60D_DIR, f"lgb_strat_{strat_id}.pkl")
+    if os.path.exists(ortho_60d_path):
+        try:
+            model = joblib.load(ortho_60d_path)
+            raw_pred = model.predict(live_df[feature_subset])
+            live_copy = live_df.copy()
+            live_copy["pred"] = rank_01(raw_pred)
+            live_copy = neutralize(live_copy, ["pred"], extra_neutralizers=neutralizer_feats, proportion=neut_proportion)
+            return rank_01(live_copy["pred"].values)
+        except Exception as e:
+            if not allow_mock_fallback:
+                raise e
+
+    # 3. Existing Tri-Ensemble Fleet (LightGBM + XGBoost + CatBoost)
     lgb_path = os.path.join(TRI_DIR, f"lgb_strat_{strat_id}.pkl")
     xgb_path = os.path.join(TRI_DIR, f"xgb_strat_{strat_id}.pkl")
     cb_path = os.path.join(TRI_DIR, f"cb_strat_{strat_id}.pkl")
