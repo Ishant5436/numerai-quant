@@ -85,7 +85,8 @@ def compute_regime_metrics(corrs: pd.Series) -> dict:
     m_corr = float(corrs.mean())
     s_corr = float(corrs.std())
     raw_sharpe = float(m_corr / (s_corr + 1e-8))
-    ann_sharpe = float(raw_sharpe * np.sqrt(52.0))
+    ann_sharpe = float(raw_sharpe * np.sqrt(12.0))  # Monthly annualized convention (matches train_60d_ensemble.py)
+    ann_sharpe_weekly = float(raw_sharpe * np.sqrt(52.0))  # Raw weekly annualization
     cumsum = corrs.cumsum()
     max_dd = float((cumsum.cummax() - cumsum).max())
     hit_rate = float(np.mean(corrs > 0.0))
@@ -98,6 +99,7 @@ def compute_regime_metrics(corrs: pd.Series) -> dict:
         "std_corr": round(s_corr, 5),
         "raw_era_sharpe": round(raw_sharpe, 3),
         "ann_sharpe": round(ann_sharpe, 2),
+        "ann_sharpe_weekly": round(ann_sharpe_weekly, 2),
         "max_drawdown": round(max_dd, 4),
         "hit_rate": round(hit_rate, 3),
         "n_eras": len(corrs)
