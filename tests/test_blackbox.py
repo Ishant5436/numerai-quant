@@ -247,7 +247,7 @@ def test_blackbox_fleet_submit_main_orchestration_mocked(monkeypatch, tmp_path):
     medium_feats = groups["all_medium"]
     n_assets = 15
     mini_live = pd.DataFrame(
-        np.random.uniform(0, 1, size=(n_assets, len(medium_feats))),
+        np.random.randint(0, 5, size=(n_assets, len(medium_feats)), dtype=np.int8),
         columns=medium_feats,
         index=[f"id_{i}" for i in range(n_assets)]
     )

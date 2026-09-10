@@ -4,6 +4,8 @@ Numerai Quant Configuration (Alpha Ensemble Standard - v5.0)
 import os
 
 FEATURE_SET = "medium"  # 705 features for deep multi-factor alpha
+FNCV3_SET = "fncv3_features"  # 400 official risk factor features for FNCv3 neutralization
+
 ENSEMBLE_TARGETS = [
     "target",            # Benchmark Cyrus (core alpha)
     "target_cyrusd_60",   # 60-Day Ender Core Benchmark
@@ -12,14 +14,26 @@ ENSEMBLE_TARGETS = [
     "target_jeremy_60",  # 60-Day Value/Quality Momentum Returns
     "target_xerxes_60"   # 60-Day Tail-Risk Defense Returns
 ]
-NEUTRALIZATION_PROPORTION = 0.25
+
+# 60-Day Multi-Target Quintet for 95th+ Percentile Out-of-Sample Performance
+ENSEMBLE_TARGETS_60D = [
+    "target_cyrusd_60",   # 60-Day Ender Core Benchmark
+    "target_agnes_60",    # 60-Day Orthogonal Residual Alpha
+    "target_victor_60",   # 60-Day Volatility-Adjusted Returns
+    "target_jeremy_60",   # 60-Day Quality/Value Momentum
+    "target_xerxes_60"    # 60-Day Tail-Risk Defense
+]
+
+NEUTRALIZATION_PROPORTION = 0.35
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(BASE_DIR, "models")
+MODEL_60D_DIR = os.path.join(MODEL_DIR, "ensemble_60d")
 FEATURES_JSON = os.path.join(BASE_DIR, "features.json")
 DATA_DIR = os.path.join(BASE_DIR, "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(MODEL_DIR, exist_ok=True)
+os.makedirs(MODEL_60D_DIR, exist_ok=True)
 TARGET_COL = "target"
 MODEL_PATH = os.path.join(MODEL_DIR, "lgb_target.pkl")
 

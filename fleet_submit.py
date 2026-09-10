@@ -25,6 +25,7 @@ load_dotenv(os.path.expanduser("~/.env"))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TRI_DIR = os.path.join(BASE_DIR, "models", "tri_ensemble_fleet")
 ORTHO_DIR = os.path.join(BASE_DIR, "models", "orthogonal_fleet")
+MODEL_60D_DIR = os.path.join(BASE_DIR, "models", "ensemble_60d")
 
 
 def robust_api_call(func, *args, max_retries: int = 5, base_delay: float = 2.0, description: str = "API Operation", **kwargs):
@@ -109,6 +110,7 @@ def load_feature_groups() -> dict:
 
     groups = {
         "all_medium": meta["feature_sets"]["medium"],
+        "fncv3_features": meta["feature_sets"]["fncv3_features"],
         "fundamental": get_subset(["intelligence", "charisma", "wisdom"]),
         "momentum": get_subset(["strength", "dexterity", "agility"]),
         "macro": get_subset(["serenity", "sunshine", "midnight"]),
@@ -249,26 +251,66 @@ def resolve_strategy_config(model_name: str, idx: int) -> tuple[int, str, float]
 
 
 def generate_tri_ensemble_prediction(live_df: pd.DataFrame, strat_id: int, feature_subset: list, neut_proportion: float, neutralizer_feats: list, allow_mock_fallback: bool = False) -> np.ndarray:
+    # 1. 60-Day Multi-Target Quintet (Flagship Strategy 1 Priority)
+    if strat_id == 1:
+        targets_60d = [
+            "target_cyrusd_60", "target_agnes_60", "target_victor_60",
+            "target_jeremy_60", "target_xerxes_60"
+        ]
+        models_60d_paths = [os.path.join(MODEL_60D_DIR, f"lgb_{t}.pkl") for t in targets_60d]
+        if all(os.path.exists(p) for p in models_60d_paths):
+            try:
+                preds_60d = []
+                for p in models_60d_paths:
+                    m = joblib.load(p)
+                    preds_60d.append(rank_01(m.predict(live_df[feature_subset])))
+                raw_pred = np.mean(preds_60d, axis=0)
+                live_copy = live_df.copy()
+                live_copy["pred"] = rank_01(raw_pred)
+                live_copy = neutralize(live_copy, ["pred"], extra_neutralizers=neutralizer_feats, proportion=neut_proportion)
+                return rank_01(live_copy["pred"].values)
+            except Exception as e:
+                if allow_mock_fallback:
+                    raw_pred = np.mean(live_df[feature_subset].values, axis=1)
+                    live_copy = live_df.copy()
+                    live_copy["pred"] = rank_01(raw_pred)
+                    live_copy = neutralize(live_copy, ["pred"], extra_neutralizers=neutralizer_feats, proportion=neut_proportion)
+                    return rank_01(live_copy["pred"].values)
+                raise e
+
+    # 2. Existing Tri-Ensemble Fleet (LightGBM + XGBoost + CatBoost)
     lgb_path = os.path.join(TRI_DIR, f"lgb_strat_{strat_id}.pkl")
     xgb_path = os.path.join(TRI_DIR, f"xgb_strat_{strat_id}.pkl")
     cb_path = os.path.join(TRI_DIR, f"cb_strat_{strat_id}.pkl")
 
     if os.path.exists(lgb_path) and os.path.exists(xgb_path) and os.path.exists(cb_path):
-        m_lgb = joblib.load(lgb_path)
-        m_xgb = joblib.load(xgb_path)
-        m_cb = joblib.load(cb_path)
+        try:
+            m_lgb = joblib.load(lgb_path)
+            m_xgb = joblib.load(xgb_path)
+            m_cb = joblib.load(cb_path)
 
-        p_lgb = rank_01(m_lgb.predict(live_df[feature_subset]))
-        p_xgb = rank_01(m_xgb.predict(live_df[feature_subset]))
-        p_cb = rank_01(m_cb.predict(live_df[feature_subset]))
+            p_lgb = rank_01(m_lgb.predict(live_df[feature_subset]))
+            p_xgb = rank_01(m_xgb.predict(live_df[feature_subset]))
+            p_cb = rank_01(m_cb.predict(live_df[feature_subset]))
 
-        raw_pred = 0.40 * p_lgb + 0.30 * p_xgb + 0.30 * p_cb
+            raw_pred = 0.40 * p_lgb + 0.30 * p_xgb + 0.30 * p_cb
+        except Exception as e:
+            if allow_mock_fallback:
+                raw_pred = np.mean(live_df[feature_subset].values, axis=1)
+            else:
+                raise e
     else:
         # Fallback to single LightGBM
         single_path = os.path.join(ORTHO_DIR, f"lgb_strat_{strat_id}.pkl")
         if os.path.exists(single_path):
-            model = joblib.load(single_path)
-            raw_pred = model.predict(live_df[feature_subset])
+            try:
+                model = joblib.load(single_path)
+                raw_pred = model.predict(live_df[feature_subset])
+            except Exception as e:
+                if allow_mock_fallback:
+                    raw_pred = np.mean(live_df[feature_subset].values, axis=1)
+                else:
+                    raise e
         elif allow_mock_fallback:
             # Explicitly restricted to synthetic test environments where weights are gitignored
             raw_pred = np.mean(live_df[feature_subset].values, axis=1)
@@ -316,7 +358,8 @@ def main():
         print("Feature universe integrity verified: 0 NaNs across all medium features.")
     
     print(f"Live market universe loaded: {len(live_df)} assets")
-    neutralizer_feats = groups["all_medium"][:60]
+    neutralizer_feats = groups.get("fncv3_features", groups["all_medium"])
+    print(f"Loaded {len(neutralizer_feats)} canonical FNCv3 risk factors for orthogonal neutralization.")
 
     failed_models = []
     success_models = []

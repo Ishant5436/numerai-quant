@@ -35,7 +35,8 @@ def neutralize(
     if proportion <= 0.0:
         return df
 
-    neutralizers = extra_neutralizers if extra_neutralizers is not None else []
+    available_cols = set(df.columns)
+    neutralizers = [c for c in extra_neutralizers if c in available_cols] if extra_neutralizers is not None else []
     neutralizers_matrix = df[neutralizers].values if neutralizers else None
 
     df_neutralized = df.copy()
