@@ -1,8 +1,8 @@
 {
   "evaluation_stride": 8,
   "n_validation_eras": 83,
-  "effective_independent_bets": 6.29,
-  "mean_fleet_pairwise_corr": 0.3171,
+  "effective_independent_bets": 6.0,
+  "mean_fleet_pairwise_corr": 0.3297,
   "strategies": {
     "1": {
       "strategy_id": 1,
@@ -14,7 +14,7 @@
       "per_era_sharpe": 1.245,
       "max_drawdown": 0.05,
       "n_eras": 81,
-      "staking_weight": 0.0541
+      "staking_weight": 0.0526
     },
     "2": {
       "strategy_id": 2,
@@ -26,7 +26,7 @@
       "per_era_sharpe": 0.72,
       "max_drawdown": 0.0636,
       "n_eras": 81,
-      "staking_weight": 0.0313
+      "staking_weight": 0.0304
     },
     "3": {
       "strategy_id": 3,
@@ -38,7 +38,7 @@
       "per_era_sharpe": 1.109,
       "max_drawdown": 0.05,
       "n_eras": 81,
-      "staking_weight": 0.0482
+      "staking_weight": 0.0469
     },
     "4": {
       "strategy_id": 4,
@@ -50,19 +50,19 @@
       "per_era_sharpe": 0.936,
       "max_drawdown": 0.0601,
       "n_eras": 81,
-      "staking_weight": 0.0407
+      "staking_weight": 0.0396
     },
     "5": {
       "strategy_id": 5,
-      "target": "target_delta_60",
+      "target": "target_cyrusd_60",
       "feature_group": "constitution",
-      "neutralization": 0.5,
-      "mean_spearman": 0.01425,
-      "annualized_sharpe": 5.188,
-      "per_era_sharpe": 0.719,
-      "max_drawdown": 0.0553,
+      "neutralization": 0.35,
+      "mean_spearman": 0.01267,
+      "annualized_sharpe": 5.19,
+      "per_era_sharpe": 0.72,
+      "max_drawdown": 0.0425,
       "n_eras": 81,
-      "staking_weight": 0.0313
+      "staking_weight": 0.0304
     },
     "6": {
       "strategy_id": 6,
@@ -74,7 +74,7 @@
       "per_era_sharpe": 1.256,
       "max_drawdown": 0.0597,
       "n_eras": 81,
-      "staking_weight": 0.0546
+      "staking_weight": 0.0531
     },
     "7": {
       "strategy_id": 7,
@@ -86,7 +86,7 @@
       "per_era_sharpe": 0.62,
       "max_drawdown": 0.1479,
       "n_eras": 81,
-      "staking_weight": 0.0269
+      "staking_weight": 0.0262
     },
     "8": {
       "strategy_id": 8,
@@ -98,7 +98,7 @@
       "per_era_sharpe": 1.103,
       "max_drawdown": 0.0785,
       "n_eras": 81,
-      "staking_weight": 0.048
+      "staking_weight": 0.0466
     },
     "9": {
       "strategy_id": 9,
@@ -110,7 +110,7 @@
       "per_era_sharpe": 0.76,
       "max_drawdown": 0.0695,
       "n_eras": 81,
-      "staking_weight": 0.033
+      "staking_weight": 0.0321
     },
     "10": {
       "strategy_id": 10,
@@ -122,19 +122,19 @@
       "per_era_sharpe": 1.098,
       "max_drawdown": 0.0238,
       "n_eras": 81,
-      "staking_weight": 0.0477
+      "staking_weight": 0.0464
     },
     "11": {
       "strategy_id": 11,
-      "target": "target_alpha_60",
+      "target": "target_victor_60",
       "feature_group": "alpha_conviction",
-      "neutralization": 0.3,
-      "mean_spearman": 0.01338,
-      "annualized_sharpe": 4.589,
-      "per_era_sharpe": 0.636,
-      "max_drawdown": 0.1009,
+      "neutralization": 0.35,
+      "mean_spearman": 0.01903,
+      "annualized_sharpe": 6.404,
+      "per_era_sharpe": 0.888,
+      "max_drawdown": 0.0954,
       "n_eras": 81,
-      "staking_weight": 0.0277
+      "staking_weight": 0.0375
     },
     "12": {
       "strategy_id": 12,
@@ -146,19 +146,19 @@
       "per_era_sharpe": 1.198,
       "max_drawdown": 0.0297,
       "n_eras": 81,
-      "staking_weight": 0.0521
+      "staking_weight": 0.0506
     },
     "13": {
       "strategy_id": 13,
-      "target": "target_claudia_60",
+      "target": "target_jeremy_60",
       "feature_group": "risk_parity",
       "neutralization": 0.35,
-      "mean_spearman": 0.0117,
-      "annualized_sharpe": 4.792,
-      "per_era_sharpe": 0.665,
-      "max_drawdown": 0.0827,
+      "mean_spearman": 0.02005,
+      "annualized_sharpe": 4.199,
+      "per_era_sharpe": 0.582,
+      "max_drawdown": 0.1663,
       "n_eras": 81,
-      "staking_weight": 0.0289
+      "staking_weight": 0.0246
     },
     "14": {
       "strategy_id": 14,
@@ -170,7 +170,7 @@
       "per_era_sharpe": 1.166,
       "max_drawdown": 0.0487,
       "n_eras": 81,
-      "staking_weight": 0.0507
+      "staking_weight": 0.0493
     },
     "15": {
       "strategy_id": 15,
@@ -182,7 +182,7 @@
       "per_era_sharpe": 1.19,
       "max_drawdown": 0.0274,
       "n_eras": 81,
-      "staking_weight": 0.0517
+      "staking_weight": 0.0503
     },
     "16": {
       "strategy_id": 16,
@@ -194,7 +194,7 @@
       "per_era_sharpe": 0.746,
       "max_drawdown": 0.0686,
       "n_eras": 81,
-      "staking_weight": 0.0324
+      "staking_weight": 0.0315
     },
     "17": {
       "strategy_id": 17,
@@ -206,19 +206,19 @@
       "per_era_sharpe": 0.979,
       "max_drawdown": 0.0739,
       "n_eras": 81,
-      "staking_weight": 0.0425
+      "staking_weight": 0.0414
     },
     "18": {
       "strategy_id": 18,
-      "target": "target_delta_60",
+      "target": "target_waldo_60",
       "feature_group": "residual_alpha",
-      "neutralization": 0.5,
-      "mean_spearman": 0.01474,
-      "annualized_sharpe": 4.848,
-      "per_era_sharpe": 0.672,
-      "max_drawdown": 0.103,
+      "neutralization": 0.35,
+      "mean_spearman": 0.01796,
+      "annualized_sharpe": 6.454,
+      "per_era_sharpe": 0.895,
+      "max_drawdown": 0.0417,
       "n_eras": 81,
-      "staking_weight": 0.0292
+      "staking_weight": 0.0378
     },
     "19": {
       "strategy_id": 19,
@@ -230,7 +230,7 @@
       "per_era_sharpe": 0.868,
       "max_drawdown": 0.0345,
       "n_eras": 81,
-      "staking_weight": 0.0377
+      "staking_weight": 0.0367
     },
     "20": {
       "strategy_id": 20,
@@ -242,19 +242,19 @@
       "per_era_sharpe": 0.861,
       "max_drawdown": 0.0405,
       "n_eras": 81,
-      "staking_weight": 0.0374
+      "staking_weight": 0.0364
     },
     "21": {
       "strategy_id": 21,
-      "target": "target_rowan_60",
+      "target": "target_sam_60",
       "feature_group": "high_sharpe_quality",
-      "neutralization": 0.3,
-      "mean_spearman": 0.00889,
-      "annualized_sharpe": 4.179,
-      "per_era_sharpe": 0.58,
-      "max_drawdown": 0.0377,
+      "neutralization": 0.35,
+      "mean_spearman": 0.01514,
+      "annualized_sharpe": 6.082,
+      "per_era_sharpe": 0.843,
+      "max_drawdown": 0.094,
       "n_eras": 81,
-      "staking_weight": 0.0252
+      "staking_weight": 0.0356
     },
     "22": {
       "strategy_id": 22,
@@ -266,7 +266,7 @@
       "per_era_sharpe": 1.108,
       "max_drawdown": 0.0263,
       "n_eras": 81,
-      "staking_weight": 0.0481
+      "staking_weight": 0.0468
     },
     "23": {
       "strategy_id": 23,
@@ -278,7 +278,7 @@
       "per_era_sharpe": 0.809,
       "max_drawdown": 0.0828,
       "n_eras": 81,
-      "staking_weight": 0.0351
+      "staking_weight": 0.0342
     },
     "24": {
       "strategy_id": 24,
@@ -290,7 +290,7 @@
       "per_era_sharpe": 0.879,
       "max_drawdown": 0.0606,
       "n_eras": 81,
-      "staking_weight": 0.0382
+      "staking_weight": 0.0371
     },
     "25": {
       "strategy_id": 25,
@@ -302,7 +302,7 @@
       "per_era_sharpe": 1.085,
       "max_drawdown": 0.0465,
       "n_eras": 81,
-      "staking_weight": 0.0471
+      "staking_weight": 0.0458
     }
   }
 }
