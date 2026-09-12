@@ -36,4 +36,33 @@ FACTOR_WEIGHTS = {
     "volume_shock": 0.15       # Institutional abnormal volume acceleration
 }
 
-NEUTRALIZATION_PROPORTION = 0.35  # Project out 35% of broad market beta
+# Registered Numerai Signals Models
+SIGNALS_MODELS = {
+    "cypherpole_sig": {
+        "id": "15c9929e-d4d7-46ff-b677-d906f292f465",
+        "description": "Flagship Multi-Factor Composite",
+        "strategy": "flagship"
+    },
+    "cypherpole_sig_mom": {
+        "id": "a028d72b-7b66-4f87-add2-2e167180d31e",
+        "description": "Momentum & Technical Oscillator Divergence",
+        "strategy": "momentum"
+    },
+    "cypherpole_sig_val": {
+        "id": "f4a0cf86-4749-4773-a027-5b9621ee70a5",
+        "description": "Fundamental Value Yield Alpha",
+        "strategy": "value"
+    },
+    "cypherpole_sig_vol": {
+        "id": "0c9787d6-4550-4a0e-8058-f8d68719aa3b",
+        "description": "Low-Volatility & Quality Defensive Alpha",
+        "strategy": "low_vol"
+    },
+    "cypherpole_sig_alpha": {
+        "id": "0907cb71-355b-4b8e-a0a4-58a1cbf3f87d",
+        "description": "Supernova Multi-Horizon Composite",
+        "strategy": "supernova"
+    },
+}
+
+NEUTRALIZATION_PROPORTION = 0.35  # Project out 35% of broad market risk factors
