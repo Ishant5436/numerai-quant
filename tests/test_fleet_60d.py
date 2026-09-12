@@ -109,3 +109,46 @@ def test_all_25_strategies_real_inference():
         assert not np.isnan(preds).any(), f"Strategy {strat_id} produced NaNs"
         assert np.all(preds >= 0.0) and np.all(preds <= 1.0), f"Strategy {strat_id} out of bounds"
 
+
+def test_flagship_anchored_blending_invariants():
+    """Assert Flagship Anchored Blending preserves valid bounds, shifts predictions smoothly, and maintains zero NaNs."""
+    import pytest
+    from config import MODEL_60D_DIR, FLAGSHIP_ANCHOR_WEIGHT
+    if not os.path.exists(ORTHO_60D_DIR) or not os.path.exists(MODEL_60D_DIR):
+        pytest.skip("Model directories missing (weights are gitignored in CI).")
+    if not os.path.exists(os.path.join(ORTHO_60D_DIR, "lgb_strat_2.pkl")):
+        pytest.skip("Strategy 2 weights missing.")
+
+    groups = load_feature_groups()
+    fncv3 = groups["fncv3_features"][:20]
+    n_assets = 100
+    rng = np.random.default_rng(seed=77)
+    dummy_df = pd.DataFrame(
+        rng.integers(0, 5, (n_assets, len(groups["all_medium"])), dtype=np.int8),
+        columns=groups["all_medium"]
+    )
+
+    # Generate unanchored prediction (alpha = 0.0)
+    p_unanchored = generate_tri_ensemble_prediction(
+        dummy_df, strat_id=2, feature_subset=groups["fundamental"],
+        neut_proportion=0.35, neutralizer_feats=fncv3, anchor_weight=0.0
+    )
+
+    # Generate anchored prediction (alpha = 0.20)
+    p_anchored = generate_tri_ensemble_prediction(
+        dummy_df, strat_id=2, feature_subset=groups["fundamental"],
+        neut_proportion=0.35, neutralizer_feats=fncv3, anchor_weight=0.20
+    )
+
+    assert len(p_anchored) == n_assets, "Anchored predictions wrong length"
+    assert not np.isnan(p_anchored).any(), "Anchored predictions contain NaNs"
+    assert np.all(p_anchored >= 0.0) and np.all(p_anchored <= 1.0), "Anchored predictions out of bounds"
+    assert np.isclose(np.mean(p_anchored), 0.5, atol=0.05), "Anchored predictions not centered at 0.5"
+    assert np.isclose(np.std(p_anchored), np.sqrt(1.0 / 12.0), atol=0.05), "Anchored predictions non-uniform"
+    
+    # Assert correlation between anchored and unanchored is strong (> 0.85) but not identical (< 1.0)
+    corr = float(np.corrcoef(p_unanchored, p_anchored)[0, 1])
+    assert 0.85 <= corr < 1.0, f"Expected high correlation between anchored and unanchored, got {corr}"
+    assert FLAGSHIP_ANCHOR_WEIGHT == 0.20, f"Expected default FLAGSHIP_ANCHOR_WEIGHT 0.20, got {FLAGSHIP_ANCHOR_WEIGHT}"
+
+

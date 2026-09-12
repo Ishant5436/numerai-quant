@@ -23,6 +23,7 @@ from config import (
     EXPLICIT_MODEL_ROUTING,
     FEATURES_JSON,
     FLEET_STRATEGY_MAP_60D,
+    FLAGSHIP_ANCHOR_WEIGHT,
     ORTHO_60D_DIR,
 )
 from neutralize import neutralize, rank_01
@@ -264,7 +265,41 @@ def resolve_strategy_config(model_name: str, idx: int) -> tuple[int, str, float]
     return slot_map.get(slot, (1, "all_medium", 0.25))
 
 
-def generate_tri_ensemble_prediction(live_df: pd.DataFrame, strat_id: int, feature_subset: list, neut_proportion: float, neutralizer_feats: list, allow_mock_fallback: bool = False) -> np.ndarray:
+def get_flagship_quintet_raw_prediction(live_df: pd.DataFrame, feature_subset: list = None) -> np.ndarray | None:
+    """Compute raw ensemble predictions from 5-target 60-day Flagship models."""
+    targets_60d = [
+        "target_cyrusd_60", "target_agnes_60", "target_victor_60",
+        "target_jeremy_60", "target_xerxes_60"
+    ]
+    models_60d_paths = [os.path.join(MODEL_60D_DIR, f"lgb_{t}.pkl") for t in targets_60d]
+    if not all(os.path.exists(p) for p in models_60d_paths):
+        return None
+    try:
+        preds = []
+        for p in models_60d_paths:
+            m = joblib.load(p)
+            feats_to_use = [f for f in m.feature_name_ if f in live_df.columns] if hasattr(m, "feature_name_") else feature_subset
+            if not feats_to_use or len(feats_to_use) < 10:
+                feats_to_use = [c for c in live_df.columns if c.startswith("feature_")]
+            preds.append(rank_01(m.predict(live_df[feats_to_use])))
+        return np.mean(preds, axis=0)
+    except Exception:
+        return None
+
+
+def generate_tri_ensemble_prediction(
+    live_df: pd.DataFrame,
+    strat_id: int,
+    feature_subset: list,
+    neut_proportion: float,
+    neutralizer_feats: list,
+    allow_mock_fallback: bool = False,
+    anchor_weight: float = None,
+    quintet_raw: np.ndarray = None,
+) -> np.ndarray:
+    if anchor_weight is None:
+        anchor_weight = FLAGSHIP_ANCHOR_WEIGHT if strat_id > 1 else 0.0
+
     # 1. 60-Day Multi-Target Quintet (Flagship Strategy 1 Priority)
     if strat_id == 1:
         targets_60d = [
@@ -298,6 +333,14 @@ def generate_tri_ensemble_prediction(live_df: pd.DataFrame, strat_id: int, featu
         try:
             model = joblib.load(ortho_60d_path)
             raw_pred = model.predict(live_df[feature_subset])
+
+            # Apply Flagship Anchored Blending if anchor_weight > 0
+            if anchor_weight > 0.0:
+                if quintet_raw is None:
+                    quintet_raw = get_flagship_quintet_raw_prediction(live_df, feature_subset)
+                if quintet_raw is not None and len(quintet_raw) == len(raw_pred):
+                    raw_pred = (1.0 - anchor_weight) * rank_01(raw_pred) + anchor_weight * rank_01(quintet_raw)
+
             live_copy = live_df.copy()
             live_copy["pred"] = rank_01(raw_pred)
             live_copy = neutralize(live_copy, ["pred"], extra_neutralizers=neutralizer_feats, proportion=neut_proportion)
@@ -389,6 +432,12 @@ def main():
     neutralizer_feats = groups.get("fncv3_features", groups["all_medium"])
     print(f"Loaded {len(neutralizer_feats)} canonical FNCv3 risk factors for orthogonal neutralization.")
 
+    # Precompute Flagship Quintet prediction once for efficient anchored blending across the fleet
+    print("[INIT] Precomputing Flagship Quintet prediction for anchored blending...")
+    quintet_raw = get_flagship_quintet_raw_prediction(live_df, groups["all_medium"])
+    if quintet_raw is not None:
+        print(f"[OK] Flagship Quintet precomputed for {len(quintet_raw)} assets (Anchor weight: {FLAGSHIP_ANCHOR_WEIGHT*100:.0f}%).")
+
     failed_models = []
     success_models = []
 
@@ -414,7 +463,7 @@ def main():
 
             strat_id, group_key, neut_prop = resolve_strategy_config(model_name, idx)
             print(f"Applying Strategy {strat_id} ('{group_key}', {len(groups[group_key])} features, {neut_prop*100:.0f}% Neutralized)...")
-            preds = generate_tri_ensemble_prediction(live_df, strat_id, groups[group_key], neut_prop, neutralizer_feats)
+            preds = generate_tri_ensemble_prediction(live_df, strat_id, groups[group_key], neut_prop, neutralizer_feats, quintet_raw=quintet_raw)
 
             sub_df = pd.DataFrame({"id": live_df.index, "prediction": preds})
             sub_df.to_csv(preds_path, index=False)

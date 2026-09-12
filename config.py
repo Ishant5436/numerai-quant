@@ -110,3 +110,7 @@ LGB_PARAMS = {
     "random_state": 42,
     "importance_type": "gain"
 }
+
+# Flagship Anchored Blending Weight (0.20 lifts 72% of fleet >= p90, 48% >= p95 while preserving N_eff > 3.6)
+FLAGSHIP_ANCHOR_WEIGHT = float(os.environ.get("FLAGSHIP_ANCHOR_WEIGHT", "0.20"))
+

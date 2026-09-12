@@ -260,8 +260,8 @@ def test_blackbox_fleet_submit_main_orchestration_mocked(monkeypatch, tmp_path):
 
     # Mock generate_tri_ensemble_prediction to use allow_mock_fallback=True
     orig_gen = fleet_submit.generate_tri_ensemble_prediction
-    def safe_gen(live_df, strat_id, feature_subset, neut_proportion, neutralizer_feats, allow_mock_fallback=False):
-        return orig_gen(live_df, strat_id, feature_subset, neut_proportion, neutralizer_feats, allow_mock_fallback=True)
+    def safe_gen(live_df, strat_id, feature_subset, neut_proportion, neutralizer_feats, allow_mock_fallback=False, *args, **kwargs):
+        return orig_gen(live_df, strat_id, feature_subset, neut_proportion, neutralizer_feats, allow_mock_fallback=True, *args, **kwargs)
 
     monkeypatch.setattr(fleet_submit, "generate_tri_ensemble_prediction", safe_gen)
 

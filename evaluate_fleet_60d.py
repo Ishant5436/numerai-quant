@@ -15,8 +15,10 @@ import pandas as pd
 from scipy.stats import spearmanr
 
 from config import (
+    BASE_DIR,
     DATA_DIR,
     FLEET_STRATEGY_MAP_60D,
+    FLAGSHIP_ANCHOR_WEIGHT,
     MODEL_60D_DIR,
     ORTHO_60D_DIR,
 )
@@ -38,7 +40,11 @@ def calc_era_spearman(df: pd.DataFrame, pred_col: str = "pred", target_col: str 
         sub = df[df["era"] == era].dropna(subset=[pred_col, target_col])
         if len(sub) < 50:
             continue
-        corr, _ = spearmanr(sub[pred_col].values, sub[target_col].values)
+        p_vals = sub[pred_col].values if isinstance(sub[pred_col], pd.Series) else sub[pred_col].iloc[:, 0].values
+        t_vals = sub[target_col].values if isinstance(sub[target_col], pd.Series) else sub[target_col].iloc[:, 0].values
+        corr, _ = spearmanr(p_vals, t_vals)
+        if hasattr(corr, "__len__"):
+            corr = float(np.ravel(corr)[0])
         if np.isfinite(corr):
             era_corrs[era] = float(corr)
 
@@ -129,23 +135,39 @@ def load_validation_data(val_path: str, targets: list, features: list, stride: i
     return df
 
 
-def predict_strategy(val_df: pd.DataFrame, strat_id: int, feat_subset: list, neut_prop: float, fncv3_feats: list) -> np.ndarray:
+def predict_strategy(
+    val_df: pd.DataFrame,
+    strat_id: int,
+    feat_subset: list,
+    neut_prop: float,
+    fncv3_feats: list,
+    anchor_weight: float = None,
+    quintet_raw: np.ndarray = None,
+) -> np.ndarray:
     """Generate out-of-sample predictions for a single strategy."""
     assert strat_id in range(1, 26), f"Invalid strat_id: {strat_id}"
     assert len(feat_subset) > 0, f"Empty features for strategy {strat_id}"
+    if anchor_weight is None:
+        anchor_weight = FLAGSHIP_ANCHOR_WEIGHT if strat_id > 1 else 0.0
 
     if strat_id == 1:
-        targets_60d = ["target_cyrusd_60", "target_agnes_60", "target_victor_60", "target_jeremy_60", "target_xerxes_60"]
-        preds = []
-        for t in targets_60d:
-            m = joblib.load(os.path.join(MODEL_60D_DIR, f"lgb_{t}.pkl"))
-            preds.append(rank_01(m.predict(val_df[feat_subset])))
-        raw_pred = np.mean(preds, axis=0)
+        if quintet_raw is not None:
+            raw_pred = quintet_raw
+        else:
+            targets_60d = ["target_cyrusd_60", "target_agnes_60", "target_victor_60", "target_jeremy_60", "target_xerxes_60"]
+            preds = []
+            for t in targets_60d:
+                m = joblib.load(os.path.join(MODEL_60D_DIR, f"lgb_{t}.pkl"))
+                preds.append(rank_01(m.predict(val_df[feat_subset])))
+            raw_pred = np.mean(preds, axis=0)
     else:
         model_path = os.path.join(ORTHO_60D_DIR, f"lgb_strat_{strat_id}.pkl")
         assert os.path.exists(model_path), f"Missing model: {model_path}"
         m = joblib.load(model_path)
         raw_pred = m.predict(val_df[feat_subset])
+
+        if anchor_weight > 0.0 and quintet_raw is not None:
+            raw_pred = (1.0 - anchor_weight) * rank_01(raw_pred) + anchor_weight * rank_01(quintet_raw)
 
     df_copy = val_df[["era"] + fncv3_feats].copy()
     df_copy["pred"] = rank_01(raw_pred)
@@ -172,6 +194,14 @@ def run_fleet_evaluation(stride: int = 4) -> dict:
     
     val_df = load_validation_data(val_path, targets_needed, all_medium, stride=stride)
     
+    print("[VAL INIT] Precomputing Flagship Quintet raw predictions...")
+    targets_60d = ["target_cyrusd_60", "target_agnes_60", "target_victor_60", "target_jeremy_60", "target_xerxes_60"]
+    quintet_raw_preds = []
+    for t in targets_60d:
+        m = joblib.load(os.path.join(MODEL_60D_DIR, f"lgb_{t}.pkl"))
+        quintet_raw_preds.append(rank_01(m.predict(val_df[all_medium])))
+    quintet_raw = np.mean(quintet_raw_preds, axis=0)
+
     strat_metrics = {}
     fleet_preds = {}
 
@@ -180,16 +210,22 @@ def run_fleet_evaluation(stride: int = 4) -> dict:
         eval_target = "target_cyrusd_60" if strat_id == 1 else target_col
         feats = groups[feat_key]
         
-        preds = predict_strategy(val_df, strat_id, feats, neut_prop, fncv3)
+        preds = predict_strategy(val_df, strat_id, feats, neut_prop, fncv3, quintet_raw=quintet_raw)
         fleet_preds[strat_id] = preds
         
-        eval_df = val_df[["era", eval_target]].copy()
+        eval_cols = list(dict.fromkeys(["era", eval_target, "target_cyrusd_60"]))
+        eval_df = val_df[eval_cols].copy()
         eval_df["pred"] = preds
         
         era_corrs = calc_era_spearman(eval_df, pred_col="pred", target_col=eval_target)
         mean_corr = float(era_corrs.mean())
         sharpe = calc_sharpe(era_corrs)
         drawdown = calc_cumulative_drawdown(era_corrs)
+
+        # Also calculate benchmark spearman correlation on target_cyrusd_60
+        bench_corrs = calc_era_spearman(eval_df, pred_col="pred", target_col="target_cyrusd_60")
+        bench_mean = float(bench_corrs.mean())
+        bench_sharpe = calc_sharpe(bench_corrs)
         
         strat_metrics[strat_id] = {
             "strategy_id": strat_id,
@@ -200,9 +236,11 @@ def run_fleet_evaluation(stride: int = 4) -> dict:
             "annualized_sharpe": round(sharpe, 3),
             "per_era_sharpe": round(sharpe / np.sqrt(52.0), 3),
             "max_drawdown": round(drawdown, 4),
+            "benchmark_spearman_60d": round(bench_mean, 5),
+            "benchmark_sharpe_60d": round(bench_sharpe, 3),
             "n_eras": len(era_corrs)
         }
-        print(f"[STRAT {strat_id:2d}] Corr: {mean_corr:+.4f} | Ann Sharpe: {sharpe:+.2f} | Max DD: {drawdown:.4f}")
+        print(f"[STRAT {strat_id:2d}] Target: {mean_corr:+.4f} (Sharpe {sharpe:+.2f}) | Bench 60d: {bench_mean:+.4f} (Sharpe {bench_sharpe:+.2f}) | DD: {drawdown:.4f}")
 
     # Compute 25 x 25 cross-strategy correlation matrix
     pred_matrix = np.column_stack([fleet_preds[s] for s in range(1, 26)])
@@ -227,9 +265,12 @@ def run_fleet_evaluation(stride: int = 4) -> dict:
     }
     
     out_file = os.path.join(DATA_DIR, "fleet_60d_validation_metrics.json")
+    repo_file = os.path.join(BASE_DIR, "metrics_fleet_60d.json")
     with open(out_file, "w") as f:
         json.dump(output, f, indent=2)
-    print(f"[SAVED] Evaluation metrics written to {out_file}")
+    with open(repo_file, "w") as f:
+        json.dump(output, f, indent=2)
+    print(f"[SAVED] Evaluation metrics written to {out_file} and {repo_file}")
     return output
 
 
