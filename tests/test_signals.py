@@ -173,3 +173,78 @@ def test_pipeline_raises_when_every_ticker_fails(tmp_path, monkeypatch):
     pipeline = SupernovaSignalsPipeline(tickers=["AAPL", "MSFT"], use_live_data=True)
     with pytest.raises(DataFetchError):
         pipeline.run_pipeline(output_filename=str(tmp_path / "should_not_be_written.csv"))
+
+
+def test_short_term_reversal_5d_directionality():
+    gen = SupernovaAlphaGenerator(FACTOR_WEIGHTS)
+    dates = pd.date_range("2025-01-01", periods=60)
+    # Series A: Flat for 55 days, then pumps 20% in last 5 days
+    prices_pump = np.full(60, 100.0)
+    prices_pump[55:] = np.linspace(100.0, 120.0, 5)
+    closes_pump = pd.Series(prices_pump, index=dates)
+
+    # Series B: Flat for 55 days, then dumps 20% in last 5 days
+    prices_dump = np.full(60, 100.0)
+    prices_dump[55:] = np.linspace(100.0, 80.0, 5)
+    closes_dump = pd.Series(prices_dump, index=dates)
+
+    volumes = pd.Series(np.full(60, 1_000_000.0), index=dates)
+
+    factors_pump = gen.compute_factors_for_series(closes_pump, closes_pump * 1.01, closes_pump * 0.99, volumes)
+    factors_dump = gen.compute_factors_for_series(closes_dump, closes_dump * 1.01, closes_dump * 0.99, volumes)
+
+    # Reversal is negative return: a pump should yield negative reversal score (sell signal),
+    # while a dump should yield positive reversal score (buy signal)
+    assert "short_term_reversal_5d" in factors_pump
+    assert "short_term_reversal_5d" in factors_dump
+    assert factors_pump["short_term_reversal_5d"] < 0.0
+    assert factors_dump["short_term_reversal_5d"] > 0.0
+
+
+def test_carhart_momentum_12_1m_isolates_recent_drop():
+    gen = SupernovaAlphaGenerator(FACTOR_WEIGHTS)
+    dates = pd.date_range("2024-01-01", periods=260)
+    # Stock rallied from 50 to 120 over 239 days, then pulled back to 100 in the last 21 days
+    prices = np.full(260, 100.0)
+    prices[:239] = np.linspace(50.0, 120.0, 239)
+    prices[239:] = np.linspace(120.0, 100.0, 21)
+    closes = pd.Series(prices, index=dates)
+    volumes = pd.Series(np.full(260, 1_000_000.0), index=dates)
+
+    factors = gen.compute_factors_for_series(closes, closes * 1.01, closes * 0.99, volumes)
+    assert "carhart_momentum_12_1m" in factors
+    # Between t-252 and t-21, price went from ~50 to 120 -> Strong positive Carhart momentum
+    assert factors["carhart_momentum_12_1m"] > 0.5
+
+
+def test_downside_volatility_asymmetry_convexity():
+    gen = SupernovaAlphaGenerator(FACTOR_WEIGHTS)
+    dates = pd.date_range("2025-01-01", periods=60)
+
+    # Stock A: Mostly flat with positive upside spikes (positive skew / upside convexity)
+    np.random.seed(42)
+    daily_rets_convex = np.zeros(60)
+    daily_rets_convex[10] = 0.08
+    daily_rets_convex[25] = 0.07
+    daily_rets_convex[45] = 0.09
+    prices_convex = 100.0 * np.cumprod(1.0 + daily_rets_convex)
+
+    # Stock B: Mostly flat with downside crash spikes (downside liquidation)
+    daily_rets_panic = np.zeros(60)
+    daily_rets_panic[10] = -0.08
+    daily_rets_panic[25] = -0.07
+    daily_rets_panic[45] = -0.09
+    prices_panic = 100.0 * np.cumprod(1.0 + daily_rets_panic)
+
+    closes_convex = pd.Series(prices_convex, index=dates)
+    closes_panic = pd.Series(prices_panic, index=dates)
+    volumes = pd.Series(np.full(60, 1_000_000.0), index=dates)
+
+    factors_convex = gen.compute_factors_for_series(closes_convex, closes_convex * 1.01, closes_convex * 0.99, volumes)
+    factors_panic = gen.compute_factors_for_series(closes_panic, closes_panic * 1.01, closes_panic * 0.99, volumes)
+
+    assert "downside_volatility_asymmetry" in factors_convex
+    assert "downside_volatility_asymmetry" in factors_panic
+    assert factors_convex["downside_volatility_asymmetry"] > 0.0
+    assert factors_panic["downside_volatility_asymmetry"] < 0.0
+

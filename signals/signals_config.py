@@ -29,11 +29,14 @@ REPRESENTATIVE_TICKERS = [
 
 # Factor Weights for Multi-Factor Supernova Alpha
 FACTOR_WEIGHTS = {
-    "momentum_12m": 0.30,      # 12-month residual price momentum
-    "momentum_1m": -0.10,      # 1-month short-term reversal (mean reversion)
-    "volatility_inverse": 0.25,# Low-volatility anomaly (Parkinson-derived)
-    "trend_slope": 0.20,       # EMA 50 / 200 Golden Cross slope
-    "volume_shock": 0.15       # Institutional abnormal volume acceleration
+    "carhart_momentum_12_1m": 0.25,        # 12-month trend excluding recent 1-month reversal
+    "momentum_12m": 0.10,                  # 12-month residual price momentum
+    "short_term_reversal_5d": 0.15,        # 5-day weekly liquidity reversal
+    "momentum_1m": -0.05,                  # 1-month short-term mean reversion
+    "volatility_inverse": 0.15,            # Low-volatility anomaly (Parkinson-derived)
+    "downside_volatility_asymmetry": 0.15, # Positive return skew / upside convexity
+    "trend_slope": 0.10,                   # EMA 20 / 50 trend slope
+    "volume_shock": 0.05                   # Institutional abnormal volume acceleration
 }
 
 # Registered Numerai Signals Models

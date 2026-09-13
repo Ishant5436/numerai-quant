@@ -56,12 +56,36 @@ class SupernovaAlphaGenerator:
         vol_20ma = volumes.tail(20).mean()
         vol_shock = (volumes.iloc[-1] - vol_20ma) / max(vol_20ma, 1.0)
 
+        # 6. Short-Term Reversal (5-day mean reversion)
+        lookback_5d = min(len(closes) - 1, 5)
+        ret_5d = (closes.iloc[-1] - closes.iloc[-lookback_5d - 1]) / max(closes.iloc[-lookback_5d - 1], 1e-6)
+        short_term_reversal_5d = -ret_5d
+
+        # 7. Carhart 12-Month minus 1-Month Residual Momentum
+        lb_start = min(len(closes) - 1, 252)
+        lb_skip = min(len(closes) - 1, 21)
+        p_skip = closes.iloc[-lb_skip - 1]
+        p_start = closes.iloc[-lb_start - 1] if lb_start > lb_skip else closes.iloc[0]
+        carhart_mom = (p_skip - p_start) / max(p_start, 1e-6)
+
+        # 8. Downside Volatility Asymmetry (Upside vs Downside Semi-Variance)
+        tail_closes = closes.tail(31)
+        daily_rets = tail_closes.pct_change().dropna().values
+        pos_rets = daily_rets[daily_rets > 0]
+        neg_rets = daily_rets[daily_rets < 0]
+        upside_vol = np.sqrt(np.mean(pos_rets ** 2)) if len(pos_rets) > 0 else 1e-4
+        downside_vol = np.sqrt(np.mean(neg_rets ** 2)) if len(neg_rets) > 0 else 1e-4
+        vol_asymmetry = (upside_vol - downside_vol) / (upside_vol + downside_vol + 1e-6)
+
         return {
             "momentum_12m": float(mom_12m),
             "momentum_1m": float(mom_1m),
             "volatility_inverse": float(vol_inverse),
             "trend_slope": float(trend_slope),
-            "volume_shock": float(vol_shock)
+            "volume_shock": float(vol_shock),
+            "short_term_reversal_5d": float(short_term_reversal_5d),
+            "carhart_momentum_12_1m": float(carhart_mom),
+            "downside_volatility_asymmetry": float(vol_asymmetry)
         }
 
     def combine_factors(self, factor_df: pd.DataFrame) -> pd.Series:
