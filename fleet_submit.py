@@ -510,6 +510,25 @@ def main():
             failed_models.append((model_name, str(err)))
 
     print(f"\n[COMPLETE] Fleet submission complete. Succeeded: {len(success_models)}/{len(models)} | Failed: {len(failed_models)}")
+
+    # Autonomous Numerbay Zero-Capital Marketplace Syndication (Post-Submission Hook)
+    try:
+        from numerbay_publisher import NumerbayPublisher
+        nb_pub = NumerbayPublisher()
+        if nb_pub.is_configured:
+            print("\n[NUMERBAY] Syndicating predictions to Numerbay marketplace...")
+            listings = nb_pub.get_listings()
+            for item in listings:
+                p_name = item.get("name")
+                if not p_name:
+                    continue
+                csv_file = os.path.join(DATA_DIR, f"predictions_{p_name}_round_{current_round}.csv")
+                if os.path.exists(csv_file):
+                    nb_res = nb_pub.publish_predictions(p_name, csv_file)
+                    print(f"  [NUMERBAY] {p_name}: {nb_res.get('status')}")
+    except Exception as nb_err:
+        print(f"[WARN] Non-blocking Numerbay syndication bypassed: {nb_err}")
+
     if failed_models:
         print(f"[FAILURES] Failed models: {failed_models}")
         raise RuntimeError(f"Fleet submission completed with {len(failed_models)} failed model(s): {failed_models}")
@@ -517,3 +536,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
