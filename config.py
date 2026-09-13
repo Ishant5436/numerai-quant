@@ -98,17 +98,21 @@ FLEET_STRATEGY_MAP_60D = {
     25: ("target_victor_60", "vol_adjusted_alpha", 0.35),
 }
 
-# Optimized LightGBM Hyperparameters for ARM64 M5 Pro
+# Optimized LightGBM Hyperparameters for ARM64 M5 Pro (Institutional Regularization Standard)
 LGB_PARAMS = {
     "n_estimators": 450,
     "learning_rate": 0.02,
-    "max_depth": 5,
-    "num_leaves": 31,
-    "colsample_bytree": 0.1,  # Feature subsampling for extreme speed & variance reduction across 705 features
+    "max_depth": 6,
+    "num_leaves": 45,
+    "min_child_samples": 40,
+    "colsample_bytree": 0.15,  # Subsampling across 705 features
     "subsample": 0.8,
+    "reg_alpha": 0.1,          # L1 regularization to prune noisy feature splits
+    "reg_lambda": 1.0,         # L2 ridge penalty to prevent extreme leaf weights
     "n_jobs": -1,
     "random_state": 42,
-    "importance_type": "gain"
+    "importance_type": "gain",
+    "verbose": -1,
 }
 
 # Flagship Anchored Blending Weight (0.20 lifts 72% of fleet >= p90, 48% >= p95 while preserving N_eff > 3.6)

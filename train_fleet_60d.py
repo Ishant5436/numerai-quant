@@ -59,7 +59,7 @@ def train_and_save_strategy_model(train_df: pd.DataFrame, strat_id: int, target:
     elapsed = time.time() - t0
     assert os.path.exists(out_file), f"Failed to persist {out_file}"
     assert os.path.getsize(out_file) > 10_000, f"Saved model too small: {out_file}"
-    print(f"[OK] Strat {strat_id:2d} -> Target: {target:18s} | Feats: {len(feats):3d} | Saved: {elapsed:.1f}s")
+    print(f"[OK] Strat {strat_id:2d} -> Target: {target:18s} | Feats: {len(feats):3d} | Saved: {elapsed:.1f}s", flush=True)
     return out_file
 
 
