@@ -5,9 +5,7 @@ by publishing weekly prediction artifacts to the Numerbay decentralized marketpl
 Deterministic Safety-Critical Standards: Bounded loops, assertions, <=60 line functions.
 """
 import os
-import sys
 from typing import Tuple, Dict, Any, Optional, List
-import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 

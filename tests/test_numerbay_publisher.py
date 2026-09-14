@@ -3,7 +3,6 @@ Unit tests for NumerbayPublisher module.
 Deterministic Safety-Critical Standards: Bounded loops, assertions, <=60 line functions.
 """
 import os
-import pytest
 import numpy as np
 import pandas as pd
 from unittest.mock import MagicMock, patch

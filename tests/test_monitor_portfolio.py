@@ -2,7 +2,6 @@
 Unit tests for portfolio monitoring script.
 Deterministic Safety-Critical Standards: Bounded loops, assertions, <=60 line functions.
 """
-import pytest
 from scripts.monitor_portfolio import check_hackathon_pipeline_countdown, run_monitoring_pulse
 
 

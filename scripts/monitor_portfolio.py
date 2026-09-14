@@ -11,7 +11,6 @@ import os
 import sys
 import json
 from datetime import datetime, timezone
-import pandas as pd
 from dotenv import load_dotenv
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -40,7 +39,7 @@ def check_numerbay_telemetry() -> dict:
         return {
             "status": "ONLINE",
             "active_listings": len(listings),
-            "listings": [{"name": l.get("name"), "id": l.get("id"), "sku": l.get("sku")} for l in listings[:10]],
+            "listings": [{"name": item.get("name"), "id": item.get("id"), "sku": item.get("sku")} for item in listings[:10]],
             "total_sales_count": len(sales),
             "total_orders_count": len(orders),
             "nmr_revenue_earned": nmr_earned,

@@ -6,7 +6,6 @@ Adheres strictly to Power of 10 safety invariants.
 """
 
 import os
-import sys
 import time
 import joblib
 import lightgbm as lgb
