@@ -142,7 +142,7 @@ def check_hackathon_pipeline_countdown() -> dict:
         report[key] = {
             "name": item["name"],
             "prize_pool": item["prize_pool"],
-            "status": item["status"],
+            "status": "IN_JUDGING" if hours_remaining <= 0 else item["status"],
             "hours_remaining": hours_remaining if hours_remaining > 0 else 0.0,
             "is_past_deadline": hours_remaining <= 0
         }
