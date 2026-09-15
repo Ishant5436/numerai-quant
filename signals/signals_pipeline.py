@@ -7,6 +7,7 @@ Deterministic Safety-Critical Standards: Bounded loops, assertions, <=60 line fu
 
 import os
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 import numpy as np
@@ -127,6 +128,27 @@ def neutralize_and_format_signals(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
     return formatted
 
 
+def upload_single_model_with_retry(
+    sapi, csv_path: str, model_id: str, model_name: str, max_retries: int = 3
+) -> str:
+    """Uploads single model predictions with bounded retry loop and exponential backoff."""
+    assert os.path.exists(csv_path), f"Missing CSV: {csv_path}"
+    assert len(model_id) > 0, "Model ID cannot be empty"
+    last_err = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            print(f"Uploading {model_name} (ID: {model_id}, Attempt {attempt}/{max_retries})...")
+            sub_id = sapi.upload_predictions(csv_path, model_id=model_id)
+            print(f"[SUCCESS] {model_name} submitted! ID: {sub_id}")
+            return sub_id
+        except Exception as err:
+            last_err = err
+            print(f"[WARNING] Attempt {attempt}/{max_retries} failed for {model_name}: {err}")
+            if attempt < max_retries:
+                time.sleep(2.0 * attempt)
+    return f"ERROR:{last_err}"
+
+
 def upload_fleet_submissions(formatted_dict: dict[str, pd.DataFrame], dry_run: bool = False) -> dict[str, str]:
     """
     Saves submission CSVs and uploads to Numerai Signals API with retry guards.
@@ -168,14 +190,10 @@ def upload_fleet_submissions(formatted_dict: dict[str, pd.DataFrame], dry_run: b
             print(f"[DRY-RUN] Saved {len(sub_df)} rows for {model_name} -> {csv_path}")
             continue
 
-        try:
-            print(f"Uploading {len(sub_df)} rows for {model_name} (ID: {model_id})...")
-            sub_id = sapi.upload_predictions(csv_path, model_id=model_id)
-            results[model_name] = sub_id
-            print(f"[SUCCESS] {model_name} submitted! ID: {sub_id}")
-        except Exception as err:
-            results[model_name] = f"ERROR:{err}"
-            print(f"[ERROR] Failed upload for {model_name}: {err}")
+        res = upload_single_model_with_retry(sapi, csv_path, model_id, model_name)
+        results[model_name] = res
+        if res.startswith("ERROR:"):
+            print(f"[ERROR] Failed upload for {model_name}: {res}")
 
     assert len(results) > 0, "No model results processed"
     return results
