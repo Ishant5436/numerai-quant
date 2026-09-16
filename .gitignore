@@ -6,7 +6,9 @@ venv/
 .venv/
 
 # Data (too large for git)
-data/
+/data/*
+!/data/alpha_vault.json
+signals/data/
 models/
 logs/
 
