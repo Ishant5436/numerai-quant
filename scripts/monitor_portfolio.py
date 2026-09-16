@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/Users/ishantpanchal/numerai-quant/venv/bin/python
 """
 Automated Portfolio Telemetry & Zero-Capital Monitoring Engine.
 Monitors:
