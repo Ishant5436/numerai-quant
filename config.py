@@ -118,3 +118,6 @@ LGB_PARAMS = {
 # Flagship Anchored Blending Weight (0.20 lifts 72% of fleet >= p90, 48% >= p95 while preserving N_eff > 3.6)
 FLAGSHIP_ANCHOR_WEIGHT = float(os.environ.get("FLAGSHIP_ANCHOR_WEIGHT", "0.20"))
 
+# Chimera Autonomous Symbolic Alpha Synthesizer Registry
+CHIMERA_VAULT_PATH = os.path.join(DATA_DIR, "alpha_vault.json")
+

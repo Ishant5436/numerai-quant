@@ -16,3 +16,8 @@ logs/
 
 # OS
 .DS_Store
+
+# Compiled binaries
+*.dylib
+*.so
+*.o

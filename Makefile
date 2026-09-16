@@ -1,8 +1,11 @@
-.PHONY: all test demo lint clean
+.PHONY: all test build-chimera demo lint clean
 
 all: test
 
-test:
+build-chimera:
+	$(MAKE) -C chimera/csrc
+
+test: build-chimera
 	./venv/bin/python -m pytest -v
 
 demo:
