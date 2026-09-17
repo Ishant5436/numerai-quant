@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from chimera.ast_generator import (
-    ASTGenerator, Node, FeatureNode, ImmNode, UnaryNode, BinaryNode
+    ASTGenerator
 )
 from chimera.evaluator import ChimeraEngine
 

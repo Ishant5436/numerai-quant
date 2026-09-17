@@ -19,7 +19,6 @@ import pyarrow.parquet as pq
 
 from chimera.genetic_synthesizer import GeneticSynthesizer
 from chimera.orthogonality_filter import TriHurdleFilter
-from chimera.alpha_vault import AlphaVault
 from config import DATA_DIR, FEATURES_JSON, CHIMERA_VAULT_PATH
 
 def load_mining_dataset(n_eras: int = 15, max_features: int = 150, target_name: str = "target_cyrusd_60"):

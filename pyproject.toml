@@ -1,0 +1,15 @@
+[project]
+name = "numerai-quant"
+version = "1.0.0"
+description = "Numerai Tournament & Signals Autonomous Quantitative Portfolio Engine"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff.lint]
+ignore = [
+    "E402",  # Module level import not at top of file
+    "E741",  # Ambiguous variable name
+]

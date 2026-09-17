@@ -2,7 +2,7 @@ import os
 import ctypes
 import numpy as np
 from enum import IntEnum
-from typing import List, Optional, Union
+from typing import List, Optional
 
 class ChimeraOpcode(IntEnum):
     NOP = 0

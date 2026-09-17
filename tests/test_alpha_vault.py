@@ -1,11 +1,9 @@
 import os
-import json
 import pytest
 import numpy as np
 import pandas as pd
 from chimera.alpha_vault import AlphaVault, AlphaEntry
 from chimera.ast_generator import ASTGenerator
-from chimera.evaluator import ChimeraEngine
 
 @pytest.fixture
 def temp_vault_path(tmp_path):

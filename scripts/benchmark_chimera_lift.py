@@ -35,7 +35,7 @@ def main():
     base_features = medium_features[:130]
     target_col = "target_cyrusd_60"
 
-    print(f"[*] Reading validation dataset...")
+    print("[*] Reading validation dataset...")
     cols = ["era", target_col] + base_features
     df = pd.read_parquet(val_path, columns=cols)
     df = df.dropna(subset=[target_col])
@@ -123,8 +123,8 @@ def main():
     print("\n" + "="*65)
     print("                 OUT-OF-SAMPLE BENCHMARK RESULTS                ")
     print("="*65)
-    print(f" Metric                     Model A (Raw)    Model B (+Chimera)    Lift")
-    print(f"-----------------------------------------------------------------")
+    print(" Metric                     Model A (Raw)    Model B (+Chimera)    Lift")
+    print("-----------------------------------------------------------------")
     print(f" Mean Era Correlation (CORR)   {mean_a:+.4f}           {mean_b:+.4f}        {mean_b - mean_a:+.4f}")
     print(f" Era Std Dev (Volatility)      {std_a:.4f}            {std_b:.4f}        {std_b - std_a:+.4f}")
     print(f" Raw Per-Era Sharpe (mu/sigma) {sharpe_a:+.3f}           {sharpe_b:+.3f}        {sharpe_b - sharpe_a:+.3f}")

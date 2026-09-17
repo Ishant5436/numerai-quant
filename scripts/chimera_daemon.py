@@ -11,7 +11,6 @@ import json
 import signal
 import logging
 import argparse
-import sys
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
@@ -22,7 +21,6 @@ import pyarrow.parquet as pq
 
 from chimera.genetic_synthesizer import GeneticSynthesizer
 from chimera.orthogonality_filter import TriHurdleFilter
-from chimera.alpha_vault import AlphaVault
 from config import DATA_DIR, FEATURES_JSON, CHIMERA_VAULT_PATH
 
 LOG_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs", "chimera_daemon.log")

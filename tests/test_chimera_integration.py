@@ -1,9 +1,8 @@
 import os
-import pytest
 import numpy as np
 import pandas as pd
 from config import CHIMERA_VAULT_PATH
-from chimera.alpha_vault import AlphaVault, AlphaEntry
+from chimera.alpha_vault import AlphaVault
 from chimera.genetic_synthesizer import GeneticSynthesizer
 from chimera.orthogonality_filter import TriHurdleFilter
 

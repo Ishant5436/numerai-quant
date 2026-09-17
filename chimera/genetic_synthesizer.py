@@ -1,10 +1,9 @@
-import os
 import random
 import numpy as np
 from typing import List, Optional
 from chimera.ast_generator import ASTGenerator, Node
 from chimera.evaluator import ChimeraEngine
-from chimera.orthogonality_filter import TriHurdleFilter, HurdleResult
+from chimera.orthogonality_filter import TriHurdleFilter
 from chimera.alpha_vault import AlphaVault, AlphaEntry
 
 class GeneticSynthesizer:

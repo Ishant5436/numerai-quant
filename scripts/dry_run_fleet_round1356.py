@@ -14,7 +14,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-from config import DATA_DIR, FEATURES_JSON, FLEET_STRATEGY_MAP_60D, CHIMERA_VAULT_PATH
+from config import DATA_DIR, FLEET_STRATEGY_MAP_60D, CHIMERA_VAULT_PATH
 from fleet_submit import load_feature_groups, _init_session
 from chimera.alpha_vault import AlphaVault
 from numerbay_publisher import validate_prediction_dataframe
@@ -29,7 +29,9 @@ def main():
     print(f"[+] NumerAPI Session Initialized: Round {current_round} ({len(models)} connected models)")
 
     groups = load_feature_groups()
-    print(f"[+] Loaded {len(groups["all_medium"])} medium features & {len(groups["fncv3_features"])} FNCv3 neutralizers.")
+    n_med = len(groups['all_medium'])
+    n_fnc = len(groups['fncv3_features'])
+    print(f"[+] Loaded {n_med} medium features & {n_fnc} FNCv3 neutralizers.")
 
     # 1. Load Live Universe Parquet
     live_path = os.path.join(DATA_DIR, "live.parquet")
@@ -46,7 +48,7 @@ def main():
     
     t_aug = time.perf_counter()
     medium_features = groups["all_medium"]
-    augmented_live_df = vault.augment_dataframe(live_df.copy(), feature_cols=medium_features[:130])
+    _ = vault.augment_dataframe(live_df.copy(), feature_cols=medium_features[:130])
     aug_elapsed = time.perf_counter() - t_aug
     print(f"[+] Vectorized SIMD Augmentation Complete in {aug_elapsed:.3f}s. New columns: {len(vault.entries)}")
 
@@ -55,7 +57,7 @@ def main():
     success_count = 0
     
     for strat_id, (target_name, feat_group_key, neut_prop) in FLEET_STRATEGY_MAP_60D.items():
-        feat_cols = groups.get(feat_group_key, medium_features)
+        _ = groups.get(feat_group_key, medium_features)
         
         # Test synthetic prediction generation & rank_01 normalization
         # Mock score from features + chimera alpha blend

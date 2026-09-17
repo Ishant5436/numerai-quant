@@ -1,7 +1,5 @@
-import pytest
 import numpy as np
-import pandas as pd
-from chimera.orthogonality_filter import TriHurdleFilter, HurdleResult
+from chimera.orthogonality_filter import TriHurdleFilter
 
 def test_tri_hurdle_accepts_good_alpha():
     np.random.seed(42)

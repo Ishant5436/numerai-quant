@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from chimera.evaluator import ChimeraEngine, InstructionBuilder, ChimeraOpcode
+from chimera.evaluator import ChimeraEngine, InstructionBuilder
 
 @pytest.fixture(scope="module")
 def engine():
@@ -48,7 +48,6 @@ def test_basic_arithmetic_parity(engine):
     np.testing.assert_allclose(out, col0 * col1, rtol=1e-5, atol=1e-5)
 
 def test_safe_div_zero_resilience(engine):
-    n = 10000
     col0 = np.array([1.0, 5.0, -2.0, 0.0], dtype=np.float32)
     col1 = np.array([2.0, 0.0, 0.0, 4.0], dtype=np.float32)
     features = np.ascontiguousarray(np.column_stack([col0, col1]))

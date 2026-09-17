@@ -1,7 +1,7 @@
 import os
 import json
 from dataclasses import dataclass, asdict
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 import pandas as pd
 import numpy as np
 

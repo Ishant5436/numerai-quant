@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.stats import spearmanr
 from dataclasses import dataclass
-from typing import Optional, Union, List
 
 @dataclass
 class HurdleResult:
