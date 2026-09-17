@@ -25,6 +25,7 @@ from config import (
     FLEET_STRATEGY_MAP_60D,
     FLAGSHIP_ANCHOR_WEIGHT,
     ORTHO_60D_DIR,
+    STRATEGY_ANCHOR_WEIGHTS,
 )
 from neutralize import neutralize, rank_01
 
@@ -172,9 +173,9 @@ _KEYWORD_STRATEGY_ROUTING: tuple[tuple[tuple[str, ...], tuple[int, str, float]],
     (("waldo",), (24, "sentiment_divergence", 0.40)),
     (("tyler",), (23, "earnings_quality", 0.35)),
     (("sam",), (22, "macro_tail_liquidity", 0.45)),
-    (("rowan",), (21, "high_sharpe_quality", 0.30)),
+    (("rowan",), (21, "high_sharpe_quality", 0.25)),
     (("ralph",), (20, "factor_momentum", 0.35)),
-    (("echo",), (19, "mean_reversion", 0.30)),
+    (("echo",), (19, "mean_reversion", 0.25)),
     (("delta",), (18, "residual_alpha", 0.50)),
     (("charlie",), (17, "low_beta_defensive", 0.40)),
     (("bravo",), (16, "fundamental_value", 0.35)),
@@ -189,8 +190,8 @@ _KEYWORD_STRATEGY_ROUTING: tuple[tuple[tuple[str, ...], tuple[int, str, float]],
     (("macro_tail", "tail"), (10, "macro_tail", 0.45)),
     (("val", "cap"), (9, "value_capital", 0.35)),
     (("vel", "trend"), (8, "trend_velocity", 0.40)),
-    (("qual", "def"), (7, "quality_defensive", 0.35)),
-    (("res",), (5, "constitution", 0.50)),
+    (("qual", "def"), (7, "quality_defensive", 0.25)),
+    (("res",), (5, "constitution", 0.25)),
     (("macro",), (4, "macro", 0.45)),
     (("mom",), (3, "momentum", 0.40)),
 )
@@ -201,9 +202,9 @@ _MODULO_SLOT_STRATEGY_MAP: dict[int, tuple[int, str, float]] = {
     1: (2, "fundamental", 0.35),
     2: (3, "momentum", 0.40),
     3: (4, "macro", 0.45),
-    4: (5, "constitution", 0.50),
+    4: (5, "constitution", 0.25),
     5: (6, "all_medium", 0.30),
-    6: (7, "quality_defensive", 0.35),
+    6: (7, "quality_defensive", 0.25),
     7: (8, "trend_velocity", 0.40),
     8: (9, "value_capital", 0.35),
     9: (10, "macro_tail", 0.45),
@@ -215,9 +216,9 @@ _MODULO_SLOT_STRATEGY_MAP: dict[int, tuple[int, str, float]] = {
     15: (16, "fundamental_value", 0.35),
     16: (17, "low_beta_defensive", 0.40),
     17: (18, "residual_alpha", 0.50),
-    18: (19, "mean_reversion", 0.30),
+    18: (19, "mean_reversion", 0.25),
     19: (20, "factor_momentum", 0.35),
-    20: (21, "high_sharpe_quality", 0.30),
+    20: (21, "high_sharpe_quality", 0.25),
     21: (22, "macro_tail_liquidity", 0.45),
     22: (23, "earnings_quality", 0.35),
     23: (24, "sentiment_divergence", 0.40),
@@ -422,7 +423,7 @@ def generate_tri_ensemble_prediction(
     assert not live_df.empty, "live_df must be non-empty"
 
     if anchor_weight is None:
-        anchor_weight = FLAGSHIP_ANCHOR_WEIGHT if strat_id > 1 else 0.0
+        anchor_weight = STRATEGY_ANCHOR_WEIGHTS.get(strat_id, FLAGSHIP_ANCHOR_WEIGHT if strat_id > 1 else 0.0)
 
     raw_pred = _tier1_flagship_quintet(live_df, strat_id, feature_subset, allow_mock_fallback)
     if raw_pred is None:

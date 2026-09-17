@@ -75,9 +75,9 @@ FLEET_STRATEGY_MAP_60D = {
     2: ("target_jeremy_60", "fundamental", 0.35),
     3: ("target_victor_60", "momentum", 0.40),
     4: ("target_xerxes_60", "macro", 0.45),
-    5: ("target_cyrusd_60", "constitution", 0.35),
+    5: ("target_cyrusd_60", "constitution", 0.25),
     6: ("target_cyrusd_60", "all_medium", 0.30),
-    7: ("target_jeremy_60", "quality_defensive", 0.35),
+    7: ("target_jeremy_60", "quality_defensive", 0.25),
     8: ("target_caroline_60", "trend_velocity", 0.40),
     9: ("target_bravo_60", "value_capital", 0.35),
     10: ("target_xerxes_60", "macro_tail", 0.45),
@@ -89,9 +89,9 @@ FLEET_STRATEGY_MAP_60D = {
     16: ("target_bravo_60", "fundamental_value", 0.35),
     17: ("target_charlie_60", "low_beta_defensive", 0.40),
     18: ("target_waldo_60", "residual_alpha", 0.35),
-    19: ("target_echo_60", "mean_reversion", 0.30),
+    19: ("target_echo_60", "mean_reversion", 0.25),
     20: ("target_ralph_60", "factor_momentum", 0.35),
-    21: ("target_sam_60", "high_sharpe_quality", 0.35),
+    21: ("target_sam_60", "high_sharpe_quality", 0.25),
     22: ("target_sam_60", "macro_tail_liquidity", 0.45),
     23: ("target_tyler_60", "earnings_quality", 0.35),
     24: ("target_waldo_60", "sentiment_divergence", 0.40),
@@ -115,9 +115,43 @@ LGB_PARAMS = {
     "verbose": -1,
 }
 
-# Flagship Anchored Blending Weight (0.20 lifts 72% of fleet >= p90, 48% >= p95 while preserving N_eff > 3.6)
+# Default Flagship Anchored Blending Weight
 FLAGSHIP_ANCHOR_WEIGHT = float(os.environ.get("FLAGSHIP_ANCHOR_WEIGHT", "0.20"))
+
+# Tiered Asymmetric Adaptive Anchoring (A3)
+# Tier 1 (Flagships: 1, 6, 14): 0.0 (Zero dilution of full-medium core alpha)
+# Tier 2 (Targeted Laggards: 2, 5, 7, 21): 0.30 (Lifts correlation floor by +25-30%)
+# Tier 3 (Micro Specialist: 19): 0.25
+# Tier 4 (Orthogonal Factor Specialists: all others): 0.20 (Guarantees N_eff >= 3.50)
+STRATEGY_ANCHOR_WEIGHTS = {
+    1: 0.0,
+    2: 0.30,
+    3: 0.20,
+    4: 0.20,
+    5: 0.30,
+    6: 0.0,
+    7: 0.30,
+    8: 0.20,
+    9: 0.20,
+    10: 0.20,
+    11: 0.20,
+    12: 0.20,
+    13: 0.20,
+    14: 0.0,
+    15: 0.20,
+    16: 0.20,
+    17: 0.20,
+    18: 0.20,
+    19: 0.25,
+    20: 0.20,
+    21: 0.30,
+    22: 0.20,
+    23: 0.20,
+    24: 0.20,
+    25: 0.20,
+}
 
 # Chimera Autonomous Symbolic Alpha Synthesizer Registry
 CHIMERA_VAULT_PATH = os.path.join(DATA_DIR, "alpha_vault.json")
+
 

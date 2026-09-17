@@ -21,6 +21,7 @@ from config import (
     FLAGSHIP_ANCHOR_WEIGHT,
     MODEL_60D_DIR,
     ORTHO_60D_DIR,
+    STRATEGY_ANCHOR_WEIGHTS,
 )
 from fleet_submit import load_feature_groups
 from neutralize import neutralize, rank_01
@@ -148,7 +149,7 @@ def predict_strategy(
     assert strat_id in range(1, 26), f"Invalid strat_id: {strat_id}"
     assert len(feat_subset) > 0, f"Empty features for strategy {strat_id}"
     if anchor_weight is None:
-        anchor_weight = FLAGSHIP_ANCHOR_WEIGHT if strat_id > 1 else 0.0
+        anchor_weight = STRATEGY_ANCHOR_WEIGHTS.get(strat_id, FLAGSHIP_ANCHOR_WEIGHT if strat_id > 1 else 0.0)
 
     if strat_id == 1:
         if quintet_raw is not None:
