@@ -217,6 +217,9 @@ def test_blackbox_fleet_submit_main_orchestration_mocked(monkeypatch, tmp_path):
     from unittest.mock import MagicMock
     import fleet_submit
 
+    monkeypatch.setenv("NUMERAI_PUBLIC_ID", "mock_pub_id_ci")
+    monkeypatch.setenv("NUMERAI_SECRET_KEY", "mock_sec_key_ci")
+
     mock_napi = MagicMock()
     mock_napi.get_current_round.return_value = 1346
     mock_napi.get_models.return_value = {

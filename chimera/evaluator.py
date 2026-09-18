@@ -1,4 +1,5 @@
 import os
+import sys
 import ctypes
 import numpy as np
 from enum import IntEnum
@@ -132,12 +133,21 @@ class InstructionBuilder:
 
 class ChimeraEngine:
     def __init__(self, capacity_rows: int = 100000, lib_path: Optional[str] = None):
+        self.is_initialized = False
         assert capacity_rows > 0 and capacity_rows <= 1000000, "Capacity rows must be in (0, 1000000]"
         self.capacity_rows = capacity_rows
         
         if lib_path is None:
             base_dir = os.path.dirname(os.path.abspath(__file__))
-            lib_path = os.path.join(base_dir, "csrc", "libchimera_eval.dylib")
+            ext = ".dylib" if sys.platform == "darwin" else ".dll" if sys.platform == "win32" else ".so"
+            candidate = os.path.join(base_dir, "csrc", f"libchimera_eval{ext}")
+            if not os.path.exists(candidate):
+                for alt_ext in [".so", ".dylib"]:
+                    alt_path = os.path.join(base_dir, "csrc", f"libchimera_eval{alt_ext}")
+                    if os.path.exists(alt_path):
+                        candidate = alt_path
+                        break
+            lib_path = candidate
         
         assert os.path.exists(lib_path), f"Native library missing: {lib_path}"
         self._lib = ctypes.CDLL(lib_path)
@@ -166,7 +176,7 @@ class ChimeraEngine:
         self.is_initialized = True
 
     def close(self):
-        if self.is_initialized:
+        if getattr(self, "is_initialized", False):
             self._lib.chimera_free_arena(ctypes.byref(self._arena))
             self.is_initialized = False
 
