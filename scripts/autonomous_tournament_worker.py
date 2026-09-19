@@ -30,8 +30,13 @@ CHECKPOINT_DIR = DATA_DIR / "checkpoints"
 
 
 def get_authenticated_napi() -> NumerAPI:
-    pub_id = os.getenv("NUMERAI_PUBLIC_ID")
-    sec_key = os.getenv("NUMERAI_SECRET_KEY")
+    auth = os.getenv("NUMERAI_MCP_AUTH", "")
+    pub_id = os.getenv("NUMERAI_PUBLIC_ID", "")
+    sec_key = os.getenv("NUMERAI_SECRET_KEY", "")
+    if not (pub_id and sec_key) and "$" in auth:
+        parts = auth.split("$", 1)
+        if len(parts) == 2:
+            pub_id, sec_key = parts[0], parts[1]
     return NumerAPI(public_id=pub_id, secret_key=sec_key)
 
 
@@ -42,9 +47,16 @@ def check_round_status(napi: NumerAPI) -> tuple[int, bool]:
     checkpoint_file = DATA_DIR / f"completed_submissions_round_{current_round}.json"
     if checkpoint_file.exists():
         try:
+            import fcntl
             with open(checkpoint_file, "r") as f:
-                completed = json.load(f)
-            if len(completed) >= 25:
+                try:
+                    fcntl.flock(f, fcntl.LOCK_SH)
+                    completed = json.load(f)
+                finally:
+                    fcntl.flock(f, fcntl.LOCK_UN)
+            models = napi.get_models()
+            target_count = min(len(models), 25) if models else 25
+            if len(completed) >= target_count:
                 return current_round, False  # Already fully submitted
         except Exception:
             pass
@@ -54,6 +66,8 @@ def check_round_status(napi: NumerAPI) -> tuple[int, bool]:
 def run_fleet_submission() -> int:
     """Trigger the complete fleet submission pipeline."""
     python_bin = REPO_DIR / "venv" / "bin" / "python"
+    if not python_bin.exists():
+        python_bin = Path(sys.executable)
     fleet_script = REPO_DIR / "fleet_submit.py"
 
     print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Launching fleet submission via {fleet_script.name}...")

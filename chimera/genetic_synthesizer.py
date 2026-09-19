@@ -44,14 +44,14 @@ class GeneticSynthesizer:
             instructions = tree.compile_to_bytecode()
             output = engine.execute(instructions, features)
             
-            # Fast fitness: correlation with target
-            if np.std(output) < 1e-6:
+            # Fast fitness: absolute correlation with target (negative alpha is valid alpha)
+            if not np.isfinite(output).all() or np.std(output) < 1e-6:
                 return -1.0
             
             corr = np.corrcoef(output, target)[0, 1]
             if np.isnan(corr):
                 return -1.0
-            return float(corr)
+            return float(abs(corr))
         except Exception:
             return -1.0
 
@@ -63,6 +63,8 @@ class GeneticSynthesizer:
         generations: int = 5
     ) -> AlphaVault:
         assert len(features) == len(target) == len(eras), "Data lengths must match"
+        features = np.ascontiguousarray(features, dtype=np.float32)
+        target = np.ascontiguousarray(target, dtype=np.float32)
         n_rows = len(features)
         engine = ChimeraEngine(capacity_rows=max(1000, n_rows))
         

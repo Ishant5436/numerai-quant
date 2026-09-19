@@ -3,6 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+mkdir -p "$SCRIPT_DIR/logs"
 LOG_FILE="$SCRIPT_DIR/logs/fleet_submit.log"
 PYTHON_BIN="$SCRIPT_DIR/venv/bin/python"
 SCRIPT_PATH="$SCRIPT_DIR/fleet_submit.py"

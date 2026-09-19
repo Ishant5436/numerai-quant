@@ -50,8 +50,8 @@ class Node:
 
     def compile_to_bytecode(self) -> List[ChimeraInstruction]:
         ib = InstructionBuilder()
-        reg_alloc = [0]
-        self.emit(ib, reg_alloc)
+        free_regs = list(range(16))  # All 16 registers available
+        self.emit(ib, free_regs)
         return ib.build()
 
 class FeatureNode(Node):
@@ -64,9 +64,8 @@ class FeatureNode(Node):
     def to_formula(self) -> str:
         return f"feat_{self.feat_idx}"
 
-    def emit(self, ib: InstructionBuilder, reg_alloc: List[int]) -> int:
-        reg = reg_alloc[0]
-        reg_alloc[0] = (reg + 1) % 15
+    def emit(self, ib: InstructionBuilder, free_regs: List[int]) -> int:
+        reg = free_regs.pop(0)
         ib.load_feat(reg=reg, feat_idx=self.feat_idx)
         return reg
 
@@ -83,9 +82,8 @@ class ImmNode(Node):
     def to_formula(self) -> str:
         return f"{self.val:.2f}"
 
-    def emit(self, ib: InstructionBuilder, reg_alloc: List[int]) -> int:
-        reg = reg_alloc[0]
-        reg_alloc[0] = (reg + 1) % 15
+    def emit(self, ib: InstructionBuilder, free_regs: List[int]) -> int:
+        reg = free_regs.pop(0)
         ib.load_imm(reg=reg, val=self.val)
         return reg
 
@@ -104,11 +102,10 @@ class UnaryNode(Node):
         name = OP_NAMES.get(self.op, "unary")
         return f"{name}({self.child.to_formula()})"
 
-    def emit(self, ib: InstructionBuilder, reg_alloc: List[int]) -> int:
-        child_reg = self.child.emit(ib, reg_alloc)
-        out_reg = reg_alloc[0]
-        reg_alloc[0] = (out_reg + 1) % 15
-        
+    def emit(self, ib: InstructionBuilder, free_regs: List[int]) -> int:
+        child_reg = self.child.emit(ib, free_regs)
+        # Unary ops write in-place to child_reg (no new register needed)
+        out_reg = child_reg
         if self.op == ChimeraOpcode.TANH:
             ib.tanh(out_reg, child_reg)
         elif self.op == ChimeraOpcode.SIGMOID:
@@ -139,12 +136,11 @@ class BinaryNode(Node):
         name = OP_NAMES.get(self.op, "binary")
         return f"{name}({self.left.to_formula()}, {self.right.to_formula()})"
 
-    def emit(self, ib: InstructionBuilder, reg_alloc: List[int]) -> int:
-        r_left = self.left.emit(ib, reg_alloc)
-        r_right = self.right.emit(ib, reg_alloc)
-        out_reg = reg_alloc[0]
-        reg_alloc[0] = (out_reg + 1) % 15
-
+    def emit(self, ib: InstructionBuilder, free_regs: List[int]) -> int:
+        r_left = self.left.emit(ib, free_regs)
+        r_right = self.right.emit(ib, free_regs)
+        # Write result into r_left, release r_right back to free pool
+        out_reg = r_left
         if self.op == ChimeraOpcode.ADD:
             ib.add(out_reg, r_left, r_right)
         elif self.op == ChimeraOpcode.SUB:
@@ -157,6 +153,7 @@ class BinaryNode(Node):
             ib.max(out_reg, r_left, r_right)
         elif self.op == ChimeraOpcode.MIN:
             ib.min(out_reg, r_left, r_right)
+        free_regs.insert(0, r_right)
         return out_reg
 
     def clone(self) -> "BinaryNode":

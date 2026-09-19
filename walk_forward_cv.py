@@ -30,10 +30,10 @@ FOLD_DEFINITIONS = {
     4: {"name": "Modern Dispersion (2023-2026)", "start_era": "1070", "end_era": "1234"},
 }
 
-PURGE_BUFFER_ERAS = 8  # 60-day horizon (~8.5 weekly eras) embargo buffer
+PURGE_BUFFER_ERAS = 12  # 60-day horizon (~12 weekly eras) embargo buffer to prevent target return leakage
 
 
-def get_purged_fold_eras(all_eras: list, start_era: str, end_era: str, purge_buffer: int = 8) -> list:
+def get_purged_fold_eras(all_eras: list, start_era: str, end_era: str, purge_buffer: int = 12) -> list:
     """Return chronological era slice with boundary purge buffer applied."""
     assert len(all_eras) > 0, "Era universe cannot be empty"
     assert start_era <= end_era, f"Invalid era range: {start_era} > {end_era}"
@@ -41,7 +41,7 @@ def get_purged_fold_eras(all_eras: list, start_era: str, end_era: str, purge_buf
     in_range = [e for e in all_eras if start_era <= e <= end_era]
     assert len(in_range) > purge_buffer, f"Insufficient eras ({len(in_range)}) for purge buffer {purge_buffer}"
 
-    # Purge first 8 eras of fold to avoid 60-day boundary overlap from previous regime
+    # Purge first 12 eras of fold to avoid 60-day boundary overlap from previous regime
     purged = in_range[purge_buffer:]
     assert len(purged) > 0, "Zero eras remaining after purge"
     return purged
@@ -60,8 +60,14 @@ def evaluate_fold_predictions(fold_df: pd.DataFrame, models: dict, features: lis
     raw_ensemble = np.mean(preds_list, axis=0)
     df_copy = fold_df[["era"] + fncv3_feats].copy()
     df_copy["pred"] = rank_01(raw_ensemble)
-    df_copy = neutralize(df_copy, ["pred"], extra_neutralizers=fncv3_feats, proportion=NEUTRALIZATION_PROPORTION)
-    neut_pred = rank_01(df_copy["pred"].values)
+    if NEUTRALIZATION_PROPORTION > 0.0 and fncv3_feats:
+        neutralized_chunks = []
+        for _, era_df in df_copy.groupby("era", sort=False):
+            sub_res = neutralize(era_df, ["pred"], extra_neutralizers=fncv3_feats, proportion=NEUTRALIZATION_PROPORTION)
+            neutralized_chunks.append(sub_res["pred"])
+        neut_pred = rank_01(pd.concat(neutralized_chunks).values)
+    else:
+        neut_pred = rank_01(df_copy["pred"].values)
 
     eval_df = fold_df[["era", "target_cyrusd_60"]].copy()
     eval_df["pred"] = neut_pred

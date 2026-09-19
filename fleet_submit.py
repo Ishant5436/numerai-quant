@@ -106,8 +106,13 @@ def safe_upload_predictions(napi: NumerAPI, file_path: str, model_id: str, timeo
         "dataDatestamp": None,
     }
     create = napi.raw_query(create_query, arguments, authorization=True)
-    submission_id = create["data"]["create_submission"]["id"]
-    assert submission_id, "Numerai create_submission returned an empty submission id"
+    if isinstance(create, dict) and "errors" in create and create["errors"]:
+        raise RuntimeError(f"Numerai GraphQL error: {create['errors']}")
+    data = create.get("data") if isinstance(create, dict) else {}
+    sub = data.get("create_submission") if isinstance(data, dict) else {}
+    submission_id = sub.get("id") if isinstance(sub, dict) else None
+    if not submission_id:
+        raise RuntimeError(f"Numerai create_submission returned empty submission id: {create}")
     return submission_id
 
 
@@ -259,7 +264,7 @@ def resolve_strategy_config(model_name: str, idx: int) -> tuple[int, str, float]
         slot = idx % 30
         result = _MODULO_SLOT_STRATEGY_MAP.get(slot, (1, "all_medium", 0.25))
 
-    assert result[0] >= 1, f"resolved strat_id must be positive, got {result[0]}"
+    assert 1 <= result[0] <= 30, f"resolved strat_id must be in [1, 30], got {result[0]}"
     assert isinstance(result[1], str) and result[1], "resolved feature group key must be a non-empty string"
     assert 0.0 <= result[2] <= 1.0, f"neutralization proportion must be in [0,1], got {result[2]}"
     return result
@@ -280,7 +285,17 @@ def get_flagship_quintet_raw_prediction(live_df: pd.DataFrame, feature_subset: l
         preds = []
         for p in models_60d_paths:
             m = joblib.load(p)
-            feats_to_use = [f for f in m.feature_name_ if f in live_df.columns] if hasattr(m, "feature_name_") else feature_subset
+            feat_names = None
+            if hasattr(m, "feature_name_"):
+                feat_names = m.feature_name_
+            elif hasattr(m, "feature_name") and callable(m.feature_name):
+                feat_names = m.feature_name()
+            elif hasattr(m, "booster_") and hasattr(m.booster_, "feature_name"):
+                feat_names = m.booster_.feature_name()
+            elif feature_subset:
+                feat_names = feature_subset
+
+            feats_to_use = [f for f in feat_names if f in live_df.columns] if feat_names else []
             if not feats_to_use or len(feats_to_use) < 10:
                 feats_to_use = [c for c in live_df.columns if c.startswith("feature_")]
             preds.append(rank_01(m.predict(live_df[feats_to_use])))
@@ -354,7 +369,7 @@ def _tier2_dedicated_ortho(
         if anchor_weight > 0.0:
             resolved_quintet = quintet_raw
             if resolved_quintet is None:
-                resolved_quintet = get_flagship_quintet_raw_prediction(live_df, feature_subset)
+                resolved_quintet = get_flagship_quintet_raw_prediction(live_df, None)
             if resolved_quintet is not None and len(resolved_quintet) == len(raw_pred):
                 raw_pred = (1.0 - anchor_weight) * rank_01(raw_pred) + anchor_weight * rank_01(resolved_quintet)
         return raw_pred
@@ -445,9 +460,13 @@ def _init_session() -> tuple[NumerAPI, int, dict]:
     auth = os.environ.get("NUMERAI_MCP_AUTH", "")
     public_id = os.environ.get("NUMERAI_PUBLIC_ID", "")
     secret_key = os.environ.get("NUMERAI_SECRET_KEY", "")
-    if "$" in auth and not (public_id and secret_key):
-        public_id, secret_key = auth.split("$", 1)
-    assert public_id and secret_key, "Numerai credentials missing: set NUMERAI_PUBLIC_ID/SECRET_KEY or NUMERAI_MCP_AUTH"
+    if not (public_id and secret_key):
+        if "$" in auth:
+            parts = auth.split("$", 1)
+            if len(parts) == 2 and parts[0] and parts[1]:
+                public_id, secret_key = parts[0], parts[1]
+    if not (public_id and secret_key):
+        raise ValueError("Numerai credentials missing: set NUMERAI_PUBLIC_ID/SECRET_KEY or NUMERAI_MCP_AUTH")
 
     napi = NumerAPI(public_id=public_id, secret_key=secret_key)
     current_round = robust_api_call(napi.get_current_round, description="Fetch current round")
@@ -494,8 +513,13 @@ def _load_checkpoint(checkpoint_file: str) -> set:
     if not os.path.exists(checkpoint_file):
         return set()
     try:
-        with open(checkpoint_file) as f:
-            return set(json.load(f))
+        import fcntl
+        with open(checkpoint_file, "r") as f:
+            try:
+                fcntl.flock(f, fcntl.LOCK_SH)
+                return set(json.load(f))
+            finally:
+                fcntl.flock(f, fcntl.LOCK_UN)
     except Exception:
         return set()
 
@@ -503,8 +527,19 @@ def _load_checkpoint(checkpoint_file: str) -> set:
 def _save_checkpoint(checkpoint_file: str, completed_models: set) -> None:
     """Best-effort persistence of submission progress; failure here must never abort a run."""
     try:
-        with open(checkpoint_file, "w") as f:
-            json.dump(list(completed_models), f)
+        import tempfile
+        import fcntl
+        dir_name = os.path.dirname(os.path.abspath(checkpoint_file))
+        lock_file = checkpoint_file + ".lock"
+        with open(lock_file, "w") as lf:
+            fcntl.flock(lf, fcntl.LOCK_EX)
+            try:
+                with tempfile.NamedTemporaryFile("w", dir=dir_name, delete=False, suffix=".tmp") as tf:
+                    json.dump(list(completed_models), tf)
+                    temp_name = tf.name
+                os.replace(temp_name, checkpoint_file)
+            finally:
+                fcntl.flock(lf, fcntl.LOCK_UN)
     except Exception:
         pass
 

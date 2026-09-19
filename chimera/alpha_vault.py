@@ -31,13 +31,18 @@ class AlphaVault:
         self.entries.append(entry)
 
     def save(self):
-        os.makedirs(os.path.dirname(os.path.abspath(self.vault_path)), exist_ok=True)
+        import tempfile
+        abs_path = os.path.abspath(self.vault_path)
+        dir_name = os.path.dirname(abs_path)
+        os.makedirs(dir_name, exist_ok=True)
         data = {
             "version": "1.0",
             "entries": [asdict(e) for e in self.entries]
         }
-        with open(self.vault_path, "w") as f:
-            json.dump(data, f, indent=2)
+        with tempfile.NamedTemporaryFile("w", dir=dir_name, delete=False, suffix=".tmp") as tf:
+            json.dump(data, tf, indent=2)
+            temp_name = tf.name
+        os.replace(temp_name, abs_path)
 
     @classmethod
     def load(cls, vault_path: str = "data/alpha_vault.json") -> "AlphaVault":

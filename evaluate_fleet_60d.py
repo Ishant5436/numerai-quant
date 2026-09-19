@@ -56,8 +56,10 @@ def calc_era_spearman(df: pd.DataFrame, pred_col: str = "pred", target_col: str 
 def calc_sharpe(era_corrs: pd.Series) -> float:
     """Calculate annualized Sharpe ratio from a series of per-era correlations."""
     assert len(era_corrs) > 0, "Cannot compute Sharpe on empty correlation series"
+    if len(era_corrs) < 2:
+        return 0.0
     std = float(era_corrs.std())
-    if std < 1e-7:
+    if not np.isfinite(std) or std < 1e-7:
         return 0.0
     # Annualized Sharpe (52 weekly eras per year)
     sharpe = float(era_corrs.mean() / std) * np.sqrt(52.0)
@@ -172,7 +174,15 @@ def predict_strategy(
 
     df_copy = val_df[["era"] + fncv3_feats].copy()
     df_copy["pred"] = rank_01(raw_pred)
-    df_copy = neutralize(df_copy, ["pred"], extra_neutralizers=fncv3_feats, proportion=neut_prop)
+    if neut_prop > 0.0 and fncv3_feats:
+        # Neutralize per-era to eliminate cross-era factor contamination
+        neutralized_chunks = []
+        for _, era_df in df_copy.groupby("era", sort=False):
+            sub_res = neutralize(era_df, ["pred"], extra_neutralizers=fncv3_feats, proportion=neut_prop)
+            neutralized_chunks.append(sub_res["pred"])
+        df_copy["pred"] = pd.concat(neutralized_chunks)
+    else:
+        df_copy["pred"] = rank_01(df_copy["pred"].values)
     
     final_pred = rank_01(df_copy["pred"].values)
     assert len(final_pred) == len(val_df), "Prediction length mismatch"

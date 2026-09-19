@@ -63,35 +63,47 @@ def compute_fleet_signals(df: pd.DataFrame) -> pd.DataFrame:
     assert "numerai_ticker" in df.columns, "Missing numerai_ticker column"
 
     res = df.copy()
+
+    def _mean_cols(dataframe, cols, fallback=0.5):
+        present = [c for c in cols if c in dataframe.columns]
+        if present:
+            return dataframe[present].mean(axis=1)
+        return pd.Series(fallback, index=dataframe.index)
+
+    def _col_or_val(dataframe, col, fallback=0.0):
+        if col in dataframe.columns:
+            return dataframe[col].fillna(fallback)
+        return pd.Series(fallback, index=dataframe.index)
+
     mom_cols = ["feature_momentum_12w_factor", "feature_momentum_26w_factor", "feature_momentum_52w_less_4w_factor"]
     val_cols = ["feature_book_to_price_factor", "feature_earnings_yield_factor", "feature_dividend_yield_factor"]
     vol_cols = ["feature_volatility_factor", "feature_beta_factor"]
 
     # 1. Flagship Multi-Factor Composite
-    s1_mom = res[mom_cols].mean(axis=1)
-    s1_val = res[val_cols].mean(axis=1)
-    s1_vol = -res[vol_cols].mean(axis=1)
+    s1_mom = _mean_cols(res, mom_cols)
+    s1_val = _mean_cols(res, val_cols)
+    s1_vol = -_mean_cols(res, vol_cols)
     res["s_flagship"] = 0.35 * rank_01(s1_mom) + 0.35 * rank_01(s1_val) + 0.30 * rank_01(s1_vol)
 
     # 2. Momentum Divergence & Oscillators
     osc_cols = ["feature_ppo_60d_90d_country_ranknorm", "feature_trix_60d_country_ranknorm", "feature_rsi_60d_country_ranknorm"]
-    res["s_mom"] = 0.50 * rank_01(res[mom_cols].mean(axis=1)) + 0.50 * rank_01(res[osc_cols].mean(axis=1))
+    res["s_mom"] = 0.50 * rank_01(_mean_cols(res, mom_cols)) + 0.50 * rank_01(_mean_cols(res, osc_cols))
 
     # 3. Fundamental Value Yield Alpha
-    s3_b2p = res["feature_book_to_price_factor"].fillna(0.0)
-    s3_ey = res["feature_earnings_yield_factor"].fillna(0.0)
-    s3_div = res["feature_dividend_yield_factor"].fillna(0.0)
+    s3_b2p = _col_or_val(res, "feature_book_to_price_factor", 0.0)
+    s3_ey = _col_or_val(res, "feature_earnings_yield_factor", 0.0)
+    s3_div = _col_or_val(res, "feature_dividend_yield_factor", 0.0)
     res["s_val"] = 0.40 * rank_01(s3_b2p) + 0.40 * rank_01(s3_ey) + 0.20 * rank_01(s3_div)
 
     # 4. Low-Volatility & Quality Defensive
-    s4_vol = -res["feature_volatility_factor"].fillna(0.0)
-    s4_beta = -res["feature_beta_factor"].fillna(0.0)
-    s4_gro = res["feature_growth_factor"].fillna(0.0)
+    s4_vol = -_col_or_val(res, "feature_volatility_factor", 0.0)
+    s4_beta = -_col_or_val(res, "feature_beta_factor", 0.0)
+    s4_gro = _col_or_val(res, "feature_growth_factor", 0.0)
     res["s_vol"] = 0.40 * rank_01(s4_vol) + 0.30 * rank_01(s4_beta) + 0.30 * rank_01(s4_gro)
 
     # 5. Supernova Multi-Horizon Composite
-    s5_p1 = res["feature_ppo_60d_130d_country_ranknorm"].fillna(0.5)
-    s5_p2 = res["feature_trix_130d_country_ranknorm"].fillna(0.5)
+    s5_p1 = _col_or_val(res, "feature_ppo_60d_130d_country_ranknorm", 0.5)
+    s5_p2 = _col_or_val(res, "feature_trix_130d_country_ranknorm", 0.5)
     res["s_alpha"] = 0.30 * rank_01(s5_p1) + 0.30 * rank_01(s5_p2) + 0.20 * rank_01(res["s_val"]) + 0.20 * rank_01(res["s_vol"])
 
     return res
@@ -196,6 +208,9 @@ def upload_fleet_submissions(formatted_dict: dict[str, pd.DataFrame], dry_run: b
             print(f"[ERROR] Failed upload for {model_name}: {res}")
 
     assert len(results) > 0, "No model results processed"
+    failed_models = [m for m, r in results.items() if r.startswith("ERROR:")]
+    if failed_models and not dry_run:
+        raise RuntimeError(f"Signals upload failed for {len(failed_models)} models: {failed_models}")
     return results
 
 

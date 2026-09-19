@@ -69,6 +69,8 @@ def _fetch_live(ticker: str, bars: int) -> pd.DataFrame:
     if raw is None or raw.empty:
         raise DataFetchError(f"yfinance returned no data for {ticker!r}")
 
+    if isinstance(raw.columns, pd.MultiIndex):
+        raw.columns = raw.columns.get_level_values(0)
     raw = raw.rename(columns={"Close": "close", "High": "high", "Low": "low", "Volume": "volume"})
     missing = [c for c in REQUIRED_COLUMNS if c not in raw.columns]
     if missing:
@@ -98,9 +100,10 @@ def fetch_ohlcv_history(ticker: str, bars: int = 252) -> pd.DataFrame:
     assert bars >= MIN_USABLE_BARS, f"bars must be >= {MIN_USABLE_BARS}"
 
     try:
-        df = _fetch_live(ticker, bars)
-        _save_cache(ticker, df)
-        return df
+        fetch_bars = max(bars, 252)
+        full_df = _fetch_live(ticker, fetch_bars)
+        _save_cache(ticker, full_df)
+        return full_df.tail(bars)
     except Exception as live_error:
         cached = _load_cache(ticker)
         if cached is not None and len(cached) >= MIN_USABLE_BARS:

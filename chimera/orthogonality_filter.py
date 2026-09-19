@@ -38,6 +38,16 @@ class TriHurdleFilter:
         
         # 1. Per-era performance
         unique_eras = np.unique(eras)
+        if len(unique_eras) < 2:
+            return HurdleResult(
+                passed=False,
+                sharpe=0.0,
+                mean_corr=0.0,
+                max_factor_corr=1.0,
+                positive_era_ratio=0.0,
+                failure_reason="At least 2 distinct eras required to evaluate Sharpe"
+            )
+
         era_corrs = []
         for era in unique_eras:
             mask = (eras == era)
@@ -61,7 +71,8 @@ class TriHurdleFilter:
 
         # 2. Orthogonality against base features
         n_feats = feature_matrix.shape[1]
-        check_indices = np.random.choice(n_feats, min(n_feats, max_features_to_check), replace=False) if n_feats > max_features_to_check else np.arange(n_feats)
+        rng = np.random.default_rng(42)
+        check_indices = rng.choice(n_feats, min(n_feats, max_features_to_check), replace=False) if n_feats > max_features_to_check else np.arange(n_feats)
         
         max_factor_corr = 0.0
         for f_idx in check_indices:

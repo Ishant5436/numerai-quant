@@ -64,7 +64,7 @@ def check_numerai_tournament_status() -> dict:
         curr_round = napi.get_current_round()
         is_open = napi.check_round_open()
 
-        round_info = napi.raw_query("""
+        rounds_resp = napi.raw_query("""
             query ($round: Int!) {
               rounds(tournament: 8, number: $round) {
                 number
@@ -73,7 +73,9 @@ def check_numerai_tournament_status() -> dict:
                 resolveTime
               }
             }
-        """, {"round": curr_round}).get("data", {}).get("rounds", [{}])[0]
+        """, {"round": curr_round})
+        rounds_list = (rounds_resp.get("data") or {}).get("rounds") if isinstance(rounds_resp, dict) else []
+        round_info = rounds_list[0] if (isinstance(rounds_list, list) and rounds_list) else {}
 
         classic_models = napi.get_models()
         signals_models = sapi.get_models()

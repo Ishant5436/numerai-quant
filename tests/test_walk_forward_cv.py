@@ -38,8 +38,8 @@ def test_get_purged_fold_eras_invariants():
 
     # Total eras in 0575..0739 inclusive is 165
     assert len(purged) == 165 - PURGE_BUFFER_ERAS, f"Expected {165 - PURGE_BUFFER_ERAS}, got {len(purged)}"
-    # First era in purged must be 0575 + 8 = 0583
-    assert purged[0] == "0583", f"Expected first purged era to be 0583, got {purged[0]}"
+    expected_first = f"{575 + PURGE_BUFFER_ERAS:04d}"
+    assert purged[0] == expected_first, f"Expected first purged era to be {expected_first}, got {purged[0]}"
     assert purged[-1] == "0739", f"Expected last purged era to be 0739, got {purged[-1]}"
 
 

@@ -11,6 +11,10 @@ int chimera_init_arena(ChimeraArena* arena, size_t max_rows) {
     if (arena == nullptr || max_rows == 0 || max_rows > CHIMERA_MAX_ROWS) {
         return -1;
     }
+    if (arena->buffer != nullptr) {
+        std::free(arena->buffer);
+        arena->buffer = nullptr;
+    }
     const size_t total_elements = CHIMERA_MAX_REGS * max_rows;
     arena->buffer = static_cast<float*>(std::calloc(total_elements, sizeof(float)));
     if (arena->buffer == nullptr) {
@@ -39,6 +43,9 @@ static int eval_load(float* out, const float* src, float imm, uint8_t op, size_t
     assert(n <= CHIMERA_MAX_ROWS);
     if (op == CHIMERA_OP_LOAD_FEAT) {
         assert(src != nullptr);
+        if (src == nullptr) {
+            return -5;
+        }
         std::memcpy(out, src, n * sizeof(float));
     } else if (op == CHIMERA_OP_LOAD_IMM) {
         for (size_t i = 0; i < n && i < CHIMERA_MAX_ROWS; ++i) {
@@ -139,6 +146,9 @@ static int execute_single_ins(
     size_t n_rows
 ) {
     assert(ins != nullptr && regs != nullptr);
+    if (ins->out_reg >= CHIMERA_MAX_REGS || ins->in_reg1 >= CHIMERA_MAX_REGS || ins->in_reg2 >= CHIMERA_MAX_REGS) {
+        return -3;
+    }
     assert(ins->out_reg < CHIMERA_MAX_REGS);
     float* out = regs[ins->out_reg];
     const uint8_t op = ins->op;
@@ -199,6 +209,9 @@ int chimera_execute(
 
     const uint8_t final_reg = instrs[num_instrs - 1].out_reg;
     assert(final_reg < CHIMERA_MAX_REGS);
+    if (final_reg >= CHIMERA_MAX_REGS) {
+        return -3;
+    }
     std::memcpy(output, regs[final_reg], num_rows * sizeof(float));
     return 0;
 }

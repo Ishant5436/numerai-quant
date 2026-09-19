@@ -40,7 +40,7 @@ def validate_prediction_file(file_path: str) -> Tuple[bool, str]:
     assert os.path.exists(file_path), f"File does not exist: {file_path}"
 
     try:
-        df = pd.read_csv(file_path, nrows=50000)
+        df = pd.read_csv(file_path)
         return validate_prediction_dataframe(df)
     except Exception as err:
         return False, f"File read error: {err}"
