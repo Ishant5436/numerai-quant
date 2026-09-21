@@ -3,11 +3,11 @@
 
 Features:
 1. Idempotency Gate: Checks active tournament round and completed checkpoints.
-   Exits cleanly in < 1s if all 25 fleet models are already submitted.
+   Exits cleanly in < 1s if all 30 fleet models are already submitted.
 2. Chimera Alpha Augmentation: Ingests live data and synthesizes high-Sharpe
    orthogonal alpha features from data/alpha_vault.json.
 3. Fleet Inference & Feature Neutralization: Runs multi-target LightGBM models
-   across cypherpole 1-25 with strict uniform percentile rank guarantees.
+   across cypherpole 1-30 with strict uniform percentile rank guarantees.
 4. Marketplace Syndication: Automatically syndicates predictions to Numerbay.
 5. Institutional Logging: Emits structured timing and submission proofs.
 """
@@ -55,7 +55,7 @@ def check_round_status(napi: NumerAPI) -> tuple[int, bool]:
                 finally:
                     fcntl.flock(f, fcntl.LOCK_UN)
             models = napi.get_models()
-            target_count = min(len(models), 25) if models else 25
+            target_count = min(len(models), 30) if models else 30
             if len(completed) >= target_count:
                 return current_round, False  # Already fully submitted
         except Exception:

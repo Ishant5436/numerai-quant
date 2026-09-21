@@ -11,6 +11,7 @@ import pytest
 from scipy.stats import spearmanr
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from config import EXPLICIT_MODEL_ROUTING, FLEET_STRATEGY_MAP_60D, STRATEGY_ANCHOR_WEIGHTS
 from fleet_submit import load_feature_groups, resolve_strategy_config, generate_tri_ensemble_prediction
 
 
@@ -97,6 +98,43 @@ def test_resolve_strategy_config_30_slots(feature_groups):
         assert 0.20 <= neut <= 0.50
 
 
+def test_explicit_model_routing_all_30_models():
+    """Verify all 30 model names exist in EXPLICIT_MODEL_ROUTING without fallback."""
+    expected_30 = [
+        "cypherpole", "cypherpole_fund", "cypherpole_mom", "cypherpole_macro", "cypherpole_res",
+        "cypherpole_cyrus", "cypherpole_qual", "cypherpole_vel", "cypherpole_val", "cypherpole_tail",
+        "cypherpole_alpha", "cypherpole_vol", "cypherpole_sharpe", "cypherpole_deep", "cypherpole_hedged",
+        "cypherpole_bravo", "cypherpole_charlie", "cypherpole_delta", "cypherpole_echo", "cypherpole_ralph",
+        "cypherpole_rowan", "cypherpole_sam", "cypherpole_tyler", "cypherpole_waldo", "cypherpole_victor",
+        "cypherpole_claudia", "cypherpole_agnes", "cypherpole_caroline", "cypherpole_ender", "cypherpole_supernova"
+    ]
+    assert len(expected_30) == 30, "expected_30 list must contain exactly 30 model names"
+    assert len(set(expected_30)) == 30, "model names must be unique"
+    for expected_id, model_name in enumerate(expected_30, 1):
+        assert model_name in EXPLICIT_MODEL_ROUTING, f"Missing '{model_name}' in EXPLICIT_MODEL_ROUTING"
+        assert EXPLICIT_MODEL_ROUTING[model_name] == expected_id, f"Wrong ID for '{model_name}'"
+
+
+def test_fleet_strategy_map_contains_30_strategies():
+    """Verify FLEET_STRATEGY_MAP_60D defines all 30 strategy IDs."""
+    assert len(FLEET_STRATEGY_MAP_60D) >= 30, f"Expected at least 30 strategies, got {len(FLEET_STRATEGY_MAP_60D)}"
+    for strat_id in range(1, 31):
+        assert strat_id in FLEET_STRATEGY_MAP_60D, f"Strategy {strat_id} missing in FLEET_STRATEGY_MAP_60D"
+        target_name, feat_key, neut_prop = FLEET_STRATEGY_MAP_60D[strat_id]
+        assert isinstance(target_name, str) and target_name, f"Invalid target for {strat_id}"
+        assert isinstance(feat_key, str) and feat_key, f"Invalid feat_key for {strat_id}"
+        assert 0.20 <= neut_prop <= 0.50, f"Invalid neut_prop {neut_prop} for {strat_id}"
+
+
+def test_strategy_anchor_weights_contains_30_strategies():
+    """Verify STRATEGY_ANCHOR_WEIGHTS defines weights for all 30 strategies."""
+    assert len(STRATEGY_ANCHOR_WEIGHTS) >= 30, f"Expected at least 30 weights, got {len(STRATEGY_ANCHOR_WEIGHTS)}"
+    for strat_id in range(1, 31):
+        assert strat_id in STRATEGY_ANCHOR_WEIGHTS, f"Strategy {strat_id} missing in STRATEGY_ANCHOR_WEIGHTS"
+        weight = STRATEGY_ANCHOR_WEIGHTS[strat_id]
+        assert 0.0 <= weight <= 0.35, f"Anchor weight {weight} out of bounds for strategy {strat_id}"
+
+
 def test_generate_predictions_strategies_16_to_30(feature_groups, synthetic_live_data):
     neutralizer_feats = feature_groups["all_medium"][:60]
     for strat_id in range(16, 31):
@@ -168,6 +206,36 @@ def test_real_weights_load_and_predict_strategies_16_to_25(feature_groups, synth
         assert preds.shape == (len(synthetic_live_data),)
         assert not np.isnan(preds).any(), f"NaNs detected in live model predictions for strategy {strat_id}"
         assert not np.isinf(preds).any(), f"Infs detected in live model predictions for strategy {strat_id}"
+        assert preds.min() >= 0.0
+        assert preds.max() <= 1.0
+        assert np.std(preds) > 0.05
+
+
+def test_real_weights_load_and_predict_strategies_26_to_30(feature_groups, synthetic_live_data):
+    """Verifies that strategies 26-30 produce predictions with zero mock fallback."""
+    from config import MODEL_60D_DIR
+    base_exist = os.path.exists(os.path.join(MODEL_60D_DIR, "lgb_target_cyrusd_60.pkl"))
+    if not base_exist:
+        pytest.skip("Base 60d weights are required.")
+
+    neutralizer_feats = feature_groups["all_medium"][:60]
+    for strat_id in range(26, 31):
+        _, group_key, neut_prop = resolve_strategy_config(f"strat_{strat_id}", strat_id - 1)
+        feature_subset = feature_groups[group_key]
+
+        preds = generate_tri_ensemble_prediction(
+            synthetic_live_data,
+            strat_id,
+            feature_subset,
+            neut_prop,
+            neutralizer_feats,
+            allow_mock_fallback=False
+        )
+
+        assert isinstance(preds, np.ndarray)
+        assert preds.shape == (len(synthetic_live_data),)
+        assert not np.isnan(preds).any(), f"NaNs detected in predictions for strategy {strat_id}"
+        assert not np.isinf(preds).any(), f"Infs detected in predictions for strategy {strat_id}"
         assert preds.min() >= 0.0
         assert preds.max() <= 1.0
         assert np.std(preds) > 0.05

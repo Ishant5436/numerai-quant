@@ -10,8 +10,8 @@ from fleet_submit import load_feature_groups, resolve_strategy_config
 
 
 def test_explicit_model_routing_completeness():
-    """Assert all 25 registered Numerai models map deterministically to valid strategy slots."""
-    assert len(EXPLICIT_MODEL_ROUTING) == 25, f"Expected 25 models, got {len(EXPLICIT_MODEL_ROUTING)}"
+    """Assert all 30 registered Numerai models map deterministically to valid strategy slots."""
+    assert len(EXPLICIT_MODEL_ROUTING) == 30, f"Expected 30 models, got {len(EXPLICIT_MODEL_ROUTING)}"
     assert "cypherpole" in EXPLICIT_MODEL_ROUTING, "Primary model cypherpole missing from routing"
     assert EXPLICIT_MODEL_ROUTING["cypherpole"] == 1, "cypherpole must route to Flagship Strategy 1"
 

@@ -12,16 +12,16 @@ from fleet_submit import load_feature_groups, generate_tri_ensemble_prediction
 
 
 def test_fleet_strategy_map_60d_completeness():
-    """Assert all 25 strategies map to valid 60-day targets and existing feature groups."""
-    assert len(FLEET_STRATEGY_MAP_60D) == 25, f"Expected 25 strategies, got {len(FLEET_STRATEGY_MAP_60D)}"
+    """Assert all strategies map to valid 60-day targets and existing feature groups."""
+    assert len(FLEET_STRATEGY_MAP_60D) >= 30, f"Expected at least 30 strategies, got {len(FLEET_STRATEGY_MAP_60D)}"
     groups = load_feature_groups()
 
-    for strat_id in range(1, 26):
+    for strat_id in range(1, len(FLEET_STRATEGY_MAP_60D) + 1):
         assert strat_id in FLEET_STRATEGY_MAP_60D, f"Strategy {strat_id} missing from 60d map"
         target, feat_group, neut_prop = FLEET_STRATEGY_MAP_60D[strat_id]
         
         # Target assertion
-        if strat_id == 1:
+        if strat_id in (1, 30):
             assert target == "5_target_quintet"
         else:
             assert target.endswith("_60"), f"Strategy {strat_id} target '{target}' does not end with '_60'"

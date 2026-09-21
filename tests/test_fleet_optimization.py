@@ -25,11 +25,11 @@ from evaluate_fleet_60d import calc_effective_bets
 
 
 def test_strategy_anchor_weights_structure_and_bounds():
-    """Assert STRATEGY_ANCHOR_WEIGHTS covers all 25 strategies with calibrated tiers."""
-    assert len(STRATEGY_ANCHOR_WEIGHTS) == 25, f"Expected 25 weights, got {len(STRATEGY_ANCHOR_WEIGHTS)}"
+    """Assert STRATEGY_ANCHOR_WEIGHTS covers all 30 strategies with calibrated tiers."""
+    assert len(STRATEGY_ANCHOR_WEIGHTS) == 30, f"Expected 30 weights, got {len(STRATEGY_ANCHOR_WEIGHTS)}"
     
     # Flagship Tier: Zero dilution of core alpha (anchor = 0.0)
-    for flagship_id in [1, 6, 14]:
+    for flagship_id in [1, 6, 14, 29, 30]:
         assert STRATEGY_ANCHOR_WEIGHTS[flagship_id] == 0.0, (
             f"Flagship strategy {flagship_id} must have anchor weight 0.0, got {STRATEGY_ANCHOR_WEIGHTS[flagship_id]}"
         )
@@ -44,7 +44,7 @@ def test_strategy_anchor_weights_structure_and_bounds():
     assert STRATEGY_ANCHOR_WEIGHTS[19] == 0.25, f"Strategy 19 must have anchor weight 0.25, got {STRATEGY_ANCHOR_WEIGHTS[19]}"
 
     # Orthogonal Factor Tier: 0.20 anchor weight
-    for ortho_id in [3, 4, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 24, 25]:
+    for ortho_id in [3, 4, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 20, 22, 23, 24, 25, 26, 27, 28]:
         assert STRATEGY_ANCHOR_WEIGHTS[ortho_id] == 0.20, (
             f"Orthogonal factor strategy {ortho_id} must have anchor weight 0.20, got {STRATEGY_ANCHOR_WEIGHTS[ortho_id]}"
         )

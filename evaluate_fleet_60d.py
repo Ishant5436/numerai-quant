@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Numerai 25-Model Fleet 60-Day Out-of-Sample Evaluation Engine.
+Numerai 30-Model Fleet 60-Day Out-of-Sample Evaluation Engine.
 Computes Spearman correlation, Sharpe, drawdown, cross-model correlation,
 and PCA effective bet metrics across validation eras.
 Adheres strictly to Gerard J. Holzmann's Power of 10 Safety Invariants.
@@ -148,12 +148,12 @@ def predict_strategy(
     quintet_raw: np.ndarray = None,
 ) -> np.ndarray:
     """Generate out-of-sample predictions for a single strategy."""
-    assert strat_id in range(1, 26), f"Invalid strat_id: {strat_id}"
+    assert 1 <= strat_id <= len(FLEET_STRATEGY_MAP_60D), f"Invalid strat_id: {strat_id}"
     assert len(feat_subset) > 0, f"Empty features for strategy {strat_id}"
     if anchor_weight is None:
         anchor_weight = STRATEGY_ANCHOR_WEIGHTS.get(strat_id, FLAGSHIP_ANCHOR_WEIGHT if strat_id > 1 else 0.0)
 
-    if strat_id == 1:
+    if strat_id in (1, 30):
         if quintet_raw is not None:
             raw_pred = quintet_raw
         else:
@@ -164,10 +164,30 @@ def predict_strategy(
                 preds.append(rank_01(m.predict(val_df[feat_subset])))
             raw_pred = np.mean(preds, axis=0)
     else:
+        target_fallback_map = {
+            26: os.path.join(MODEL_60D_DIR, "lgb_target_victor_60.pkl"),
+            27: os.path.join(MODEL_60D_DIR, "lgb_target_agnes_60.pkl"),
+            28: os.path.join(MODEL_60D_DIR, "lgb_target_jeremy_60.pkl"),
+            29: os.path.join(MODEL_60D_DIR, "lgb_target_cyrusd_60.pkl"),
+        }
         model_path = os.path.join(ORTHO_60D_DIR, f"lgb_strat_{strat_id}.pkl")
+        if not os.path.exists(model_path) and strat_id in target_fallback_map:
+            model_path = target_fallback_map[strat_id]
         assert os.path.exists(model_path), f"Missing model: {model_path}"
         m = joblib.load(model_path)
-        raw_pred = m.predict(val_df[feat_subset])
+        expected_n = getattr(m, "n_features_in_", len(feat_subset))
+        if expected_n == len(feat_subset):
+            raw_pred = m.predict(val_df[feat_subset])
+        elif expected_n > len(feat_subset):
+            m_feats = getattr(m, "feature_name_", None)
+            if m_feats is None and hasattr(m, "booster_"):
+                m_feats = getattr(m.booster_, "feature_name", lambda: None)()
+            feats_to_use = [f for f in m_feats if f in val_df.columns] if m_feats else []
+            if not feats_to_use:
+                feats_to_use = [c for c in val_df.columns if c.startswith("feature_")]
+            raw_pred = m.predict(val_df[feats_to_use])
+        else:
+            raw_pred = m.predict(val_df[feat_subset])
 
         if anchor_weight > 0.0 and quintet_raw is not None:
             raw_pred = (1.0 - anchor_weight) * rank_01(raw_pred) + anchor_weight * rank_01(quintet_raw)
@@ -189,55 +209,37 @@ def predict_strategy(
     return final_pred
 
 
-def run_fleet_evaluation(stride: int = 4) -> dict:
-    """Execute complete 25-strategy evaluation on validation data."""
-    val_path = os.path.join(DATA_DIR, "validation.parquet")
-    assert os.path.exists(val_path), f"Validation file missing: {val_path}"
-    
-    groups = load_feature_groups()
-    all_medium = groups["all_medium"]
-    fncv3 = groups["fncv3_features"]
-    
-    # Identify unique targets needed
-    targets_needed = sorted(list(set(
-        ["target", "target_cyrusd_60"] + [FLEET_STRATEGY_MAP_60D[s][0] for s in range(2, 26)]
-    )))
-    
-    val_df = load_validation_data(val_path, targets_needed, all_medium, stride=stride)
-    
-    print("[VAL INIT] Precomputing Flagship Quintet raw predictions...")
-    targets_60d = ["target_cyrusd_60", "target_agnes_60", "target_victor_60", "target_jeremy_60", "target_xerxes_60"]
-    quintet_raw_preds = []
-    for t in targets_60d:
-        m = joblib.load(os.path.join(MODEL_60D_DIR, f"lgb_{t}.pkl"))
-        quintet_raw_preds.append(rank_01(m.predict(val_df[all_medium])))
-    quintet_raw = np.mean(quintet_raw_preds, axis=0)
-
+def _evaluate_all_strategies(
+    val_df: pd.DataFrame, groups: dict, fncv3: list, quintet_raw: np.ndarray
+) -> tuple[dict, dict]:
+    """Evaluates each registered strategy individually against validation eras."""
+    assert not val_df.empty, "val_df must be non-empty"
+    assert len(groups) > 0, "groups must be non-empty"
     strat_metrics = {}
     fleet_preds = {}
+    num_strats = len(FLEET_STRATEGY_MAP_60D)
 
-    for strat_id in range(1, 26):
+    for strat_id in range(1, num_strats + 1):
         target_col, feat_key, neut_prop = FLEET_STRATEGY_MAP_60D[strat_id]
-        eval_target = "target_cyrusd_60" if strat_id == 1 else target_col
+        eval_target = "target_cyrusd_60" if strat_id in (1, 30) else target_col
         feats = groups[feat_key]
-        
+
         preds = predict_strategy(val_df, strat_id, feats, neut_prop, fncv3, quintet_raw=quintet_raw)
         fleet_preds[strat_id] = preds
-        
+
         eval_cols = list(dict.fromkeys(["era", eval_target, "target_cyrusd_60"]))
         eval_df = val_df[eval_cols].copy()
         eval_df["pred"] = preds
-        
+
         era_corrs = calc_era_spearman(eval_df, pred_col="pred", target_col=eval_target)
         mean_corr = float(era_corrs.mean())
         sharpe = calc_sharpe(era_corrs)
         drawdown = calc_cumulative_drawdown(era_corrs)
 
-        # Also calculate benchmark spearman correlation on target_cyrusd_60
         bench_corrs = calc_era_spearman(eval_df, pred_col="pred", target_col="target_cyrusd_60")
         bench_mean = float(bench_corrs.mean())
         bench_sharpe = calc_sharpe(bench_corrs)
-        
+
         strat_metrics[strat_id] = {
             "strategy_id": strat_id,
             "target": target_col,
@@ -253,28 +255,67 @@ def run_fleet_evaluation(stride: int = 4) -> dict:
         }
         print(f"[STRAT {strat_id:2d}] Target: {mean_corr:+.4f} (Sharpe {sharpe:+.2f}) | Bench 60d: {bench_mean:+.4f} (Sharpe {bench_sharpe:+.2f}) | DD: {drawdown:.4f}")
 
-    # Compute 25 x 25 cross-strategy correlation matrix
-    pred_matrix = np.column_stack([fleet_preds[s] for s in range(1, 26)])
+    return strat_metrics, fleet_preds
+
+
+def _compute_fleet_portfolio_metrics(
+    fleet_preds: dict, strat_metrics: dict, stride: int, n_eras: int
+) -> dict:
+    """Computes cross-correlation matrix, effective bets, and risk-parity weights."""
+    assert len(fleet_preds) == len(FLEET_STRATEGY_MAP_60D), "fleet_preds strategy count mismatch"
+    assert len(strat_metrics) == len(FLEET_STRATEGY_MAP_60D), "strat_metrics count mismatch"
+    num_strats = len(FLEET_STRATEGY_MAP_60D)
+
+    pred_matrix = np.column_stack([fleet_preds[s] for s in range(1, num_strats + 1)])
     corr_matrix = np.corrcoef(pred_matrix, rowvar=False)
     n_eff = calc_effective_bets(corr_matrix)
-    print(f"\n[FLEET STATS] Effective Independent Bets (N_eff): {n_eff:.2f} / 25.00")
+    print(f"\n[FLEET STATS] Effective Independent Bets (N_eff): {n_eff:.2f} / {float(num_strats):.2f}")
 
-    # Compute risk-parity weights
     cov_matrix = np.cov(pred_matrix, rowvar=False)
-    sharpes = np.array([strat_metrics[s]["annualized_sharpe"] for s in range(1, 26)])
+    sharpes = np.array([strat_metrics[s]["annualized_sharpe"] for s in range(1, num_strats + 1)])
     weights = calc_risk_parity_weights(cov_matrix, sharpes)
 
-    for i, strat_id in enumerate(range(1, 26)):
+    for i, strat_id in enumerate(range(1, num_strats + 1)):
         strat_metrics[strat_id]["staking_weight"] = round(float(weights[i]), 4)
 
-    output = {
+    mean_pair_corr = float(np.mean(corr_matrix[np.triu_indices(num_strats, k=1)]))
+    return {
         "evaluation_stride": stride,
-        "n_validation_eras": val_df["era"].nunique(),
+        "n_validation_eras": n_eras,
         "effective_independent_bets": round(n_eff, 2),
-        "mean_fleet_pairwise_corr": round(float(np.mean(corr_matrix[np.triu_indices(25, k=1)])), 4),
+        "mean_fleet_pairwise_corr": round(mean_pair_corr, 4),
         "strategies": strat_metrics
     }
-    
+
+
+def run_fleet_evaluation(stride: int = 4) -> dict:
+    """Execute complete 30-strategy evaluation on validation data."""
+    val_path = os.path.join(DATA_DIR, "validation.parquet")
+    assert os.path.exists(val_path), f"Validation file missing: {val_path}"
+    assert stride >= 1, f"stride must be >= 1, got {stride}"
+
+    groups = load_feature_groups()
+    all_medium = groups["all_medium"]
+    fncv3 = groups["fncv3_features"]
+
+    num_strats = len(FLEET_STRATEGY_MAP_60D)
+    targets_needed = sorted(list(set(
+        ["target", "target_cyrusd_60"] + [FLEET_STRATEGY_MAP_60D[s][0] for s in range(2, num_strats + 1)]
+    )))
+
+    val_df = load_validation_data(val_path, targets_needed, all_medium, stride=stride)
+
+    print("[VAL INIT] Precomputing Flagship Quintet raw predictions...")
+    targets_60d = ["target_cyrusd_60", "target_agnes_60", "target_victor_60", "target_jeremy_60", "target_xerxes_60"]
+    quintet_raw_preds = []
+    for t in targets_60d:
+        m = joblib.load(os.path.join(MODEL_60D_DIR, f"lgb_{t}.pkl"))
+        quintet_raw_preds.append(rank_01(m.predict(val_df[all_medium])))
+    quintet_raw = np.mean(quintet_raw_preds, axis=0)
+
+    strat_metrics, fleet_preds = _evaluate_all_strategies(val_df, groups, fncv3, quintet_raw)
+    output = _compute_fleet_portfolio_metrics(fleet_preds, strat_metrics, stride, val_df["era"].nunique())
+
     out_file = os.path.join(DATA_DIR, "fleet_60d_validation_metrics.json")
     repo_file = os.path.join(BASE_DIR, "metrics_fleet_60d.json")
     with open(out_file, "w") as f:
@@ -286,7 +327,7 @@ def run_fleet_evaluation(stride: int = 4) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Numerai 25-Model Fleet 60-Day Evaluation Harness")
+    parser = argparse.ArgumentParser(description="Numerai 30-Model Fleet 60-Day Evaluation Harness")
     parser.add_argument("--stride", type=int, default=4, help="Validation era stride (default: 4)")
     args = parser.parse_args()
     run_fleet_evaluation(stride=args.stride)

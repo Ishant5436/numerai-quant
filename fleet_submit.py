@@ -324,9 +324,11 @@ def _finish_prediction(
 def _tier1_flagship_quintet(
     live_df: pd.DataFrame, strat_id: int, feature_subset: list, allow_mock_fallback: bool
 ) -> np.ndarray | None:
-    """Strategy 1 only: raw 60-day multi-target quintet prediction.
-    Returns None (fall through to tier 2) if strat_id != 1 or quintet weights are missing."""
-    if strat_id != 1:
+    """Strategy 1 and 30: raw 60-day multi-target quintet prediction.
+    Returns None (fall through to tier 2) if strat_id not in (1, 30) or quintet weights are missing."""
+    assert isinstance(strat_id, int), "strat_id must be an integer"
+    assert len(feature_subset) > 0, "feature_subset must be non-empty"
+    if strat_id not in (1, 30):
         return None
 
     targets_60d = [
@@ -355,16 +357,40 @@ def _tier2_dedicated_ortho(
     allow_mock_fallback: bool,
 ) -> np.ndarray | None:
     """Dedicated 60-day orthogonal specialist model, with optional Flagship Anchored
-    Blending. Applies to any strat_id with a matching weights file on disk (in
-    practice strategies 2-25). Returns None to fall through to tier 3 -- either no
-    weights file exists, or one failed to load and mock fallback is allowed."""
+    Blending. Applies to strategies 2-30 with matching weights or base 60d models on disk.
+    Returns None to fall through to tier 3."""
+    assert isinstance(strat_id, int), "strat_id must be an integer"
+    assert len(feature_subset) > 0, "feature_subset must be non-empty"
+
     ortho_60d_path = os.path.join(ORTHO_60D_DIR, f"lgb_strat_{strat_id}.pkl")
-    if not os.path.exists(ortho_60d_path):
+    target_fallback_map = {
+        26: os.path.join(MODEL_60D_DIR, "lgb_target_victor_60.pkl"),
+        27: os.path.join(MODEL_60D_DIR, "lgb_target_agnes_60.pkl"),
+        28: os.path.join(MODEL_60D_DIR, "lgb_target_jeremy_60.pkl"),
+        29: os.path.join(MODEL_60D_DIR, "lgb_target_cyrusd_60.pkl"),
+    }
+    if os.path.exists(ortho_60d_path):
+        model_path = ortho_60d_path
+    elif strat_id in target_fallback_map and os.path.exists(target_fallback_map[strat_id]):
+        model_path = target_fallback_map[strat_id]
+    else:
         return None
 
     try:
-        model = joblib.load(ortho_60d_path)
-        raw_pred = model.predict(live_df[feature_subset])
+        model = joblib.load(model_path)
+        expected_n = getattr(model, "n_features_in_", len(feature_subset))
+        if expected_n == len(feature_subset):
+            raw_pred = model.predict(live_df[feature_subset])
+        elif expected_n > len(feature_subset):
+            model_feats = getattr(model, "feature_name_", None)
+            if model_feats is None and hasattr(model, "booster_"):
+                model_feats = getattr(model.booster_, "feature_name", lambda: None)()
+            feats_to_use = [f for f in model_feats if f in live_df.columns] if model_feats else []
+            if not feats_to_use:
+                feats_to_use = [c for c in live_df.columns if c.startswith("feature_")]
+            raw_pred = model.predict(live_df[feats_to_use])
+        else:
+            raw_pred = model.predict(live_df[feature_subset])
 
         if anchor_weight > 0.0:
             resolved_quintet = quintet_raw

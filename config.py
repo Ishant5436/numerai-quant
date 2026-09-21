@@ -66,6 +66,11 @@ EXPLICIT_MODEL_ROUTING = {
     "cypherpole_tyler": 23,
     "cypherpole_waldo": 24,
     "cypherpole_victor": 25,
+    "cypherpole_claudia": 26,
+    "cypherpole_agnes": 27,
+    "cypherpole_caroline": 28,
+    "cypherpole_ender": 29,
+    "cypherpole_supernova": 30,
 }
 
 # Complete 25-Strategy 60-Day Fleet Architecture Mapping
@@ -96,6 +101,11 @@ FLEET_STRATEGY_MAP_60D = {
     23: ("target_tyler_60", "earnings_quality", 0.35),
     24: ("target_waldo_60", "sentiment_divergence", 0.40),
     25: ("target_victor_60", "vol_adjusted_alpha", 0.35),
+    26: ("target_victor_60", "orthogonal_risk_parity", 0.35),
+    27: ("target_agnes_60", "residual_spread", 0.45),
+    28: ("target_caroline_60", "growth_trend", 0.30),
+    29: ("target_cyrusd_60", "all_medium", 0.25),
+    30: ("5_target_quintet", "all_medium", 0.35),
 }
 
 # Optimized LightGBM Hyperparameters for ARM64 M5 Pro (Institutional Regularization Standard)
@@ -149,6 +159,11 @@ STRATEGY_ANCHOR_WEIGHTS = {
     23: 0.20,
     24: 0.20,
     25: 0.20,
+    26: 0.20,
+    27: 0.20,
+    28: 0.20,
+    29: 0.0,
+    30: 0.0,
 }
 
 # Chimera Autonomous Symbolic Alpha Synthesizer Registry
