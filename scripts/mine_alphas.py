@@ -13,6 +13,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
+from typing import Optional
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
@@ -21,14 +22,29 @@ from chimera.genetic_synthesizer import GeneticSynthesizer
 from chimera.orthogonality_filter import TriHurdleFilter
 from config import DATA_DIR, FEATURES_JSON, CHIMERA_VAULT_PATH
 
-def load_mining_dataset(n_eras: int = 15, max_features: int = 150, target_name: str = "target_cyrusd_60"):
+def load_mining_dataset(
+    n_eras: int = 15,
+    max_features: int = 150,
+    target_name: str = "target_cyrusd_60",
+    random_sample: bool = False,
+    seed: Optional[int] = None
+):
+    assert n_eras > 0, "n_eras must be positive"
+    assert max_features > 0, "max_features must be positive"
+    if seed is not None:
+        np.random.seed(seed)
+
     print(f"[*] Loading feature metadata from {FEATURES_JSON}...")
     with open(FEATURES_JSON, "r") as f:
         feat_meta = json.load(f)
     medium_features = feat_meta.get("feature_sets", {}).get("medium", [])
     assert len(medium_features) > 0, "No medium features found"
 
-    selected_features = medium_features[:max_features]
+    if random_sample:
+        selected_features = list(np.random.choice(medium_features, min(max_features, len(medium_features)), replace=False))
+    else:
+        selected_features = medium_features[:max_features]
+
     val_path = os.path.join(DATA_DIR, "validation.parquet")
     assert os.path.exists(val_path), f"Missing validation.parquet at {val_path}"
 
@@ -40,8 +56,11 @@ def load_mining_dataset(n_eras: int = 15, max_features: int = 150, target_name: 
     df = pd.read_parquet(val_path, columns=cols_to_load)
     
     unique_eras = df["era"].unique()
-    step = max(1, len(unique_eras) // n_eras)
-    chosen_eras = unique_eras[::step][:n_eras]
+    if random_sample:
+        chosen_eras = np.random.choice(unique_eras, min(n_eras, len(unique_eras)), replace=False)
+    else:
+        step = max(1, len(unique_eras) // n_eras)
+        chosen_eras = unique_eras[::step][:n_eras]
     
     sample_df = df[df["era"].isin(chosen_eras)].copy()
     sample_df = sample_df.dropna(subset=[actual_target])
@@ -63,13 +82,17 @@ def main():
     parser.add_argument("--target", type=str, default="target_cyrusd_60", help="Target column to optimize")
     parser.add_argument("--min-sharpe", type=float, default=0.75, help="Minimum per-era Sharpe")
     parser.add_argument("--max-corr", type=float, default=0.15, help="Maximum correlation to any base feature")
+    parser.add_argument("--random-sample", action="store_true", help="Randomly sample features and eras")
+    parser.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility")
     args = parser.parse_args()
 
     start_t = time.time()
     feats, targets, eras, feat_names, target_used = load_mining_dataset(
         n_eras=args.eras,
         max_features=args.features,
-        target_name=args.target
+        target_name=args.target,
+        random_sample=args.random_sample,
+        seed=args.seed
     )
 
     filter_gate = TriHurdleFilter(

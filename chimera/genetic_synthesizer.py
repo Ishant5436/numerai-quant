@@ -40,18 +40,31 @@ class GeneticSynthesizer:
         target: np.ndarray,
         eras: np.ndarray
     ) -> float:
+        assert tree is not None, "tree must not be None"
+        assert len(features) == len(target), "features and target lengths must match"
         try:
             instructions = tree.compile_to_bytecode()
             output = engine.execute(instructions, features)
             
-            # Fast fitness: absolute correlation with target (negative alpha is valid alpha)
             if not np.isfinite(output).all() or np.std(output) < 1e-6:
                 return -1.0
             
             corr = np.corrcoef(output, target)[0, 1]
-            if np.isnan(corr):
+            if np.isnan(corr) or corr <= 0.0:
                 return -1.0
-            return float(abs(corr))
+            
+            feat_indices = set(tree.get_feature_indices())
+            max_f_corr = 0.0
+            for fi in feat_indices:
+                if fi < features.shape[1]:
+                    f_col = features[:, fi]
+                    if np.std(f_col) > 1e-6:
+                        fc = abs(float(np.corrcoef(output, f_col)[0, 1]))
+                        if not np.isnan(fc) and fc > max_f_corr:
+                            max_f_corr = fc
+            
+            penalty = 1.0 + 4.0 * max(0.0, max_f_corr - 0.15)
+            return float(corr / penalty)
         except Exception:
             return -1.0
 
@@ -87,10 +100,13 @@ class GeneticSynthesizer:
                     
                     hurdle_res = self.filter_gate.evaluate(sig, target, eras, features)
                     if hurdle_res.passed:
+                        formula_str = cand.to_formula()
+                        if any(e.formula == formula_str for e in self.vault.entries):
+                            continue
                         entry_idx = len(self.vault.entries) + 1
                         alpha_entry = AlphaEntry(
                             name=f"chimera_alpha_{entry_idx:02d}",
-                            formula=cand.to_formula(),
+                            formula=formula_str,
                             instructions=[(i.op, i.out_reg, i.in_reg1, i.in_reg2, i.feat_idx, i.imm_val) for i in cand_instrs],
                             sharpe=hurdle_res.sharpe,
                             mean_corr=hurdle_res.mean_corr,

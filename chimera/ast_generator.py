@@ -48,6 +48,9 @@ class Node:
     def clone(self) -> "Node":
         raise NotImplementedError
 
+    def get_feature_indices(self) -> List[int]:
+        raise NotImplementedError
+
     def compile_to_bytecode(self) -> List[ChimeraInstruction]:
         ib = InstructionBuilder()
         free_regs = list(range(16))  # All 16 registers available
@@ -72,6 +75,9 @@ class FeatureNode(Node):
     def clone(self) -> "FeatureNode":
         return FeatureNode(self.feat_idx)
 
+    def get_feature_indices(self) -> List[int]:
+        return [self.feat_idx]
+
 class ImmNode(Node):
     def __init__(self, val: float):
         self.val = float(val)
@@ -89,6 +95,9 @@ class ImmNode(Node):
 
     def clone(self) -> "ImmNode":
         return ImmNode(self.val)
+
+    def get_feature_indices(self) -> List[int]:
+        return []
 
 class UnaryNode(Node):
     def __init__(self, op: ChimeraOpcode, child: Node):
@@ -122,6 +131,9 @@ class UnaryNode(Node):
 
     def clone(self) -> "UnaryNode":
         return UnaryNode(self.op, self.child.clone())
+
+    def get_feature_indices(self) -> List[int]:
+        return self.child.get_feature_indices()
 
 class BinaryNode(Node):
     def __init__(self, op: ChimeraOpcode, left: Node, right: Node):
@@ -158,6 +170,9 @@ class BinaryNode(Node):
 
     def clone(self) -> "BinaryNode":
         return BinaryNode(self.op, self.left.clone(), self.right.clone())
+
+    def get_feature_indices(self) -> List[int]:
+        return self.left.get_feature_indices() + self.right.get_feature_indices()
 
 class ASTGenerator:
     def __init__(self, num_features: int, max_depth: int = 4):
