@@ -53,21 +53,20 @@ def sample_mining_slice(
     eras = np.ascontiguousarray(sample_df["era"].values)
     return feats, targs, eras, selected_features
 
-def run_synthesis_campaign(target_new_alphas: int = 4, max_cycles: int = 12) -> int:
-    assert target_new_alphas > 0, "Target new alphas must be positive"
-    assert max_cycles > 0 and max_cycles <= 30, "Max cycles bounded between 1 and 30"
+def run_synthesis_campaign(target_total_alphas: int = 455, max_cycles: int = 20) -> int:
+    assert target_total_alphas > 0, "Target total alphas must be positive"
+    assert max_cycles > 0 and max_cycles <= 50, "Max cycles bounded between 1 and 50"
     
     feature_pool = load_medium_feature_pool()
     val_path = os.path.join(DATA_DIR, "validation.parquet")
     schema_names = pq.read_schema(val_path).names
-    targets = [t for t in ["target_cyrusd_60", "target_jeremy_60", "target_victor_60", "target_xerxes_60"] if t in schema_names] or ["target"]
+    targets = [t for t in ["target_jeremy_60", "target_victor_60"] if t in schema_names] or ["target"]
     
     initial_vault = AlphaVault.load(CHIMERA_VAULT_PATH)
     start_count = len(initial_vault.entries)
-    goal_count = start_count + target_new_alphas
-    print(f"[*] Starting Alpha Campaign: Vault currently has {start_count} alphas. Target: {goal_count}")
+    print(f"[*] Starting Alpha Campaign: Vault currently has {start_count} alphas. Target: {target_total_alphas}")
     
-    filter_gate = TriHurdleFilter(min_sharpe=0.70, max_factor_corr=0.15, min_positive_era_ratio=0.55)
+    filter_gate = TriHurdleFilter(min_sharpe=0.60, max_factor_corr=0.18, min_positive_era_ratio=0.55)
     
     for cycle in range(1, max_cycles + 1):
         target_name = np.random.choice(targets)
@@ -75,24 +74,24 @@ def run_synthesis_campaign(target_new_alphas: int = 4, max_cycles: int = 12) -> 
         
         synth = GeneticSynthesizer(
             num_features=len(sel_feats),
-            pop_size=40,
+            pop_size=50,
             tournament_size=3,
-            mutation_rate=0.40,
-            crossover_rate=0.65,
+            mutation_rate=0.45,
+            crossover_rate=0.70,
             max_depth=4,
             vault_path=CHIMERA_VAULT_PATH,
             filter_gate=filter_gate
         )
         
         print(f"[*] Cycle {cycle}/{max_cycles}: Mining {len(feats):,} rows on {target_name}...")
-        synth.evolve_on_dataset(feats, targs, eras, generations=6)
+        synth.evolve_on_dataset(feats, targs, eras, generations=10)
         
         current_vault = AlphaVault.load(CHIMERA_VAULT_PATH)
         current_count = len(current_vault.entries)
         print(f"[+] Cycle {cycle} Complete: Vault now holds {current_count} alphas (admitted this campaign: {current_count - start_count})")
         
-        if current_count >= goal_count:
-            print(f"[SUCCESS] Goal reached! Admitted {current_count - start_count} new alphas to vault.")
+        if current_count >= target_total_alphas:
+            print(f"[SUCCESS] Goal reached! Vault now holds {current_count} alphas.")
             break
             
     final_vault = AlphaVault.load(CHIMERA_VAULT_PATH)
@@ -100,7 +99,7 @@ def run_synthesis_campaign(target_new_alphas: int = 4, max_cycles: int = 12) -> 
 
 def main():
     start_t = time.time()
-    admitted = run_synthesis_campaign(target_new_alphas=4, max_cycles=12)
+    admitted = run_synthesis_campaign(target_total_alphas=455, max_cycles=20)
     elapsed = time.time() - start_t
     print(f"[+] Campaign finished in {elapsed:.1f}s. Total newly admitted alphas: {admitted}")
 

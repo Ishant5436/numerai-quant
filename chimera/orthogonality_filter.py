@@ -35,8 +35,8 @@ class TriHurdleFilter:
         max_features_to_check: int = 150
     ) -> HurdleResult:
         assert len(signal) == len(target) == len(eras) == len(feature_matrix), "Input lengths must match"
+        assert self.min_sharpe > 0.0, "min_sharpe must be positive"
         
-        # 1. Per-era performance
         unique_eras = np.unique(eras)
         if len(unique_eras) < 2:
             return HurdleResult(
@@ -48,50 +48,19 @@ class TriHurdleFilter:
                 failure_reason="At least 2 distinct eras required to evaluate Sharpe"
             )
 
-        era_corrs = []
-        for era in unique_eras:
-            mask = (eras == era)
-            sig_era = signal[mask]
-            tar_era = target[mask]
-            
-            if np.std(sig_era) < 1e-7 or np.std(tar_era) < 1e-7:
-                era_corrs.append(0.0)
-                continue
-                
-            corr, _ = spearmanr(sig_era, tar_era)
-            if np.isnan(corr):
-                corr = 0.0
-            era_corrs.append(float(corr))
-
-        era_corrs = np.array(era_corrs, dtype=np.float64)
-        mean_corr = float(np.mean(era_corrs))
-        std_corr = float(np.std(era_corrs))
-        sharpe = float(mean_corr / (std_corr + 1e-8))
-        positive_era_ratio = float(np.mean(era_corrs > 0.0))
-
-        # 2. Orthogonality against base features
-        n_feats = feature_matrix.shape[1]
-        rng = np.random.default_rng(42)
-        check_indices = rng.choice(n_feats, min(n_feats, max_features_to_check), replace=False) if n_feats > max_features_to_check else np.arange(n_feats)
-        
-        max_factor_corr = 0.0
-        for f_idx in check_indices:
-            feat_col = feature_matrix[:, f_idx]
-            if np.std(feat_col) < 1e-7:
-                continue
-            f_corr, _ = spearmanr(signal, feat_col)
-            if not np.isnan(f_corr):
-                f_abs = abs(float(f_corr))
-                if f_abs > max_factor_corr:
-                    max_factor_corr = f_abs
+        sharpe, mean_corr, positive_era_ratio = self._calc_era_metrics(signal, target, eras, unique_eras)
 
         failures = []
         if sharpe < self.min_sharpe:
             failures.append(f"Performance failure: Sharpe {sharpe:.3f} < min {self.min_sharpe:.3f}")
         if positive_era_ratio < self.min_positive_era_ratio:
             failures.append(f"Stability failure: positive era ratio {positive_era_ratio:.1%} < min {self.min_positive_era_ratio:.1%}")
-        if max_factor_corr > self.max_factor_corr:
-            failures.append(f"Orthogonality failure: max feature correlation {max_factor_corr:.3f} > max {self.max_factor_corr:.3f}")
+
+        max_factor_corr = 0.0
+        if len(failures) == 0:
+            max_factor_corr = self._calc_max_factor_corr(signal, feature_matrix, max_features_to_check)
+            if max_factor_corr > self.max_factor_corr:
+                failures.append(f"Orthogonality failure: max feature correlation {max_factor_corr:.3f} > max {self.max_factor_corr:.3f}")
 
         passed = (len(failures) == 0)
         return HurdleResult(
@@ -102,3 +71,46 @@ class TriHurdleFilter:
             positive_era_ratio=positive_era_ratio,
             failure_reason="; ".join(failures)
         )
+
+    def _calc_era_metrics(self, signal: np.ndarray, target: np.ndarray, eras: np.ndarray, unique_eras: np.ndarray):
+        assert len(signal) == len(target), "Signal and target lengths must match"
+        assert len(unique_eras) >= 2, "Need at least 2 eras"
+        era_corrs = []
+        for era in unique_eras:
+            mask = (eras == era)
+            sig_era = signal[mask]
+            tar_era = target[mask]
+            if np.std(sig_era) < 1e-7 or np.std(tar_era) < 1e-7:
+                era_corrs.append(0.0)
+                continue
+            corr, _ = spearmanr(sig_era, tar_era)
+            era_corrs.append(0.0 if np.isnan(corr) else float(corr))
+
+        era_corrs = np.array(era_corrs, dtype=np.float64)
+        mean_corr = float(np.mean(era_corrs))
+        std_corr = float(np.std(era_corrs))
+        sharpe = float(mean_corr / (std_corr + 1e-8))
+        positive_era_ratio = float(np.mean(era_corrs > 0.0))
+        return sharpe, mean_corr, positive_era_ratio
+
+    def _calc_max_factor_corr(self, signal: np.ndarray, feature_matrix: np.ndarray, max_features_to_check: int) -> float:
+        assert signal.ndim == 1, "Signal must be 1D"
+        assert feature_matrix.ndim == 2, "Feature matrix must be 2D"
+        n_feats = feature_matrix.shape[1]
+        rng = np.random.default_rng(42)
+        check_indices = rng.choice(n_feats, min(n_feats, max_features_to_check), replace=False) if n_feats > max_features_to_check else np.arange(n_feats)
+
+        max_factor_corr = 0.0
+        for f_idx in check_indices:
+            feat_col = feature_matrix[:, f_idx]
+            if np.std(feat_col) < 1e-7:
+                continue
+            f_corr, _ = spearmanr(signal, feat_col)
+            if not np.isnan(f_corr):
+                f_abs = abs(float(f_corr))
+                if f_abs > max_factor_corr:
+                    max_factor_corr = f_abs
+                if max_factor_corr > self.max_factor_corr:
+                    break
+        return max_factor_corr
+
