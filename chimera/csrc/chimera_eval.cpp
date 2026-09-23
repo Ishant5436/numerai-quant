@@ -42,7 +42,6 @@ static int eval_load(float* out, const float* src, float imm, uint8_t op, size_t
     assert(out != nullptr);
     assert(n <= CHIMERA_MAX_ROWS);
     if (op == CHIMERA_OP_LOAD_FEAT) {
-        assert(src != nullptr);
         if (src == nullptr) {
             return -5;
         }
@@ -208,10 +207,10 @@ int chimera_execute(
     }
 
     const uint8_t final_reg = instrs[num_instrs - 1].out_reg;
-    assert(final_reg < CHIMERA_MAX_REGS);
     if (final_reg >= CHIMERA_MAX_REGS) {
         return -3;
     }
+    assert(final_reg < CHIMERA_MAX_REGS);
     std::memcpy(output, regs[final_reg], num_rows * sizeof(float));
     return 0;
 }
