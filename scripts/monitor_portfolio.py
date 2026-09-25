@@ -98,12 +98,12 @@ def check_hackathon_pipeline_countdown() -> dict:
     """Computes exact time remaining and status for all active funding pipelines."""
     now = datetime.now(timezone.utc)
     deadlines = {
-        "buidl_ctc_fall_2026": {
-            "name": "BUIDL CTC Fall 2026",
-            "prize_pool": "$15,000 USD",
+        "circle_arc_microgrants": {
+            "name": "Circle Arc Microgrants",
+            "prize_pool": "500 USDC Microgrant",
             "target": "agent-keeper-mcp (BUIDL #48196)",
-            "deadline_utc": "2026-09-14T03:59:00Z",
-            "status": "SUBMITTED_FINAL_HOURS"
+            "deadline_utc": "2026-09-30T23:59:00Z",
+            "status": "SUBMITTED"
         },
         "somnia_dreamdex": {
             "name": "Somnia × DreamDEX Hackathon",
