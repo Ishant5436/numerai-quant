@@ -9,7 +9,7 @@ def test_check_hackathon_pipeline_countdown():
     """Verify countdown returns all 5 tracks with non-negative hours."""
     report = check_hackathon_pipeline_countdown()
     assert len(report) == 5, f"Expected 5 tracks, got {len(report)}"
-    assert "buidl_ctc_fall_2026" in report
+    assert "circle_arc_microgrants" in report
     assert "somnia_dreamdex" in report
     assert "keeperhub_mcp_bounty" in report
     assert "optimism_foundation_grant" in report
