@@ -31,6 +31,7 @@ from neutralize import neutralize, rank_01
 
 load_dotenv(os.path.expanduser("~/.env"))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 TRI_DIR = os.path.join(BASE_DIR, "models", "tri_ensemble_fleet")
 ORTHO_DIR = os.path.join(BASE_DIR, "models", "orthogonal_fleet")
 MODEL_60D_DIR = os.path.join(BASE_DIR, "models", "ensemble_60d")
