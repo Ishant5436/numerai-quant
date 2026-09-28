@@ -76,7 +76,7 @@ def run_daemon_mining_cycle(cycle_id: int):
     target_vector = np.ascontiguousarray(sample_df[target_name].values, dtype=np.float32)
     eras_vector = np.ascontiguousarray(sample_df["era"].values)
 
-    filter_gate = TriHurdleFilter(min_sharpe=0.75, max_factor_corr=0.15, min_positive_era_ratio=0.60)
+    filter_gate = TriHurdleFilter(min_sharpe=0.50, max_factor_corr=0.42, min_positive_era_ratio=0.60, max_vault_corr=0.25)
     synth = GeneticSynthesizer(
         num_features=len(selected_features),
         pop_size=35,
@@ -89,7 +89,9 @@ def run_daemon_mining_cycle(cycle_id: int):
     )
 
     logging.info(f"Cycle {cycle_id}: Mining {len(sample_df):,} rows on {target_name} across {len(chosen_eras)} eras...")
-    vault = synth.evolve_on_dataset(features_matrix, target_vector, eras_vector, generations=5)
+    vault = synth.evolve_on_dataset(
+        features_matrix, target_vector, eras_vector, generations=5, feature_names=selected_features
+    )
     logging.info(f"Cycle {cycle_id} complete. Vault contains {len(vault.entries)} verified alphas.")
 
 def main():

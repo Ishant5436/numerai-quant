@@ -64,3 +64,88 @@ def test_augment_features(temp_vault_path):
     assert "chimera_alpha_01" in augmented_df.columns
     assert len(augmented_df) == 4
     assert not augmented_df["chimera_alpha_01"].isna().any()
+
+def test_alpha_entry_with_feature_names_save_load(temp_vault_path):
+    vault = AlphaVault(vault_path=temp_vault_path)
+    gen = ASTGenerator(num_features=2, max_depth=2)
+    tree = gen.random_tree()
+    entry = AlphaEntry(
+        name="chimera_alpha_named_01",
+        formula=tree.to_formula(),
+        instructions=[(ins.op, ins.out_reg, ins.in_reg1, ins.in_reg2, ins.feat_idx, ins.imm_val) for ins in tree.compile_to_bytecode()],
+        sharpe=1.35,
+        mean_corr=0.04,
+        max_factor_corr=0.06,
+        positive_era_ratio=0.75,
+        feature_names=["feature_theta", "feature_gamma"]
+    )
+    vault.add_entry(entry)
+    vault.save()
+
+    loaded_vault = AlphaVault.load(temp_vault_path)
+    assert len(loaded_vault.entries) == 1
+    loaded = loaded_vault.entries[0]
+    assert loaded.feature_names == ["feature_theta", "feature_gamma"]
+    assert loaded.name == "chimera_alpha_named_01"
+
+def test_augment_dataframe_with_canonical_feature_names(temp_vault_path):
+    vault = AlphaVault(vault_path=temp_vault_path)
+    gen = ASTGenerator(num_features=2, max_depth=2)
+    tree = gen.random_tree()
+    entry = AlphaEntry(
+        name="chimera_alpha_canonical",
+        formula=tree.to_formula(),
+        instructions=[(ins.op, ins.out_reg, ins.in_reg1, ins.in_reg2, ins.feat_idx, ins.imm_val) for ins in tree.compile_to_bytecode()],
+        sharpe=1.1,
+        mean_corr=0.02,
+        max_factor_corr=0.05,
+        positive_era_ratio=0.68,
+        feature_names=["col_b", "col_a"]
+    )
+    vault.add_entry(entry)
+
+    # DataFrame has columns in arbitrary order and extra unused columns
+    df = pd.DataFrame({
+        "col_z": np.array([10.0, 20.0, 30.0], dtype=np.float32),
+        "col_a": np.array([1.0, 2.0, 3.0], dtype=np.float32),
+        "col_b": np.array([4.0, 5.0, 6.0], dtype=np.float32),
+    })
+
+    # Call augment_dataframe WITHOUT passing feature_cols; it resolves via feature_names
+    augmented = vault.augment_dataframe(df)
+    assert "chimera_alpha_canonical" in augmented.columns
+    assert len(augmented) == 3
+    assert not augmented["chimera_alpha_canonical"].isna().any()
+
+def test_augment_dataframe_vectorized_no_fragmentation(temp_vault_path):
+    import warnings
+    vault = AlphaVault(vault_path=temp_vault_path)
+    gen = ASTGenerator(num_features=2, max_depth=2)
+    for i in range(25):
+        tree = gen.random_tree()
+        entry = AlphaEntry(
+            name=f"alpha_batch_{i:02d}",
+            formula=tree.to_formula(),
+            instructions=[(ins.op, ins.out_reg, ins.in_reg1, ins.in_reg2, ins.feat_idx, ins.imm_val) for ins in tree.compile_to_bytecode()],
+            sharpe=1.0,
+            mean_corr=0.02,
+            max_factor_corr=0.05,
+            positive_era_ratio=0.60,
+            feature_names=["f0", "f1"]
+        )
+        vault.add_entry(entry)
+
+    df = pd.DataFrame({
+        "f0": np.linspace(0, 1, 100, dtype=np.float32),
+        "f1": np.linspace(1, 2, 100, dtype=np.float32)
+    })
+
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always", pd.errors.PerformanceWarning)
+        augmented = vault.augment_dataframe(df)
+
+    perf_warnings = [w for w in record if issubclass(w.category, pd.errors.PerformanceWarning)]
+    assert len(perf_warnings) == 0, f"Expected 0 PerformanceWarnings, got {len(perf_warnings)}"
+    assert len(vault.entries) > 5, "Should have multiple unique entries"
+    assert augmented.shape[1] == 2 + len(vault.entries)
+

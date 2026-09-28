@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.stats import spearmanr
 from dataclasses import dataclass
+from typing import List, Optional
 
 @dataclass
 class HurdleResult:
@@ -16,15 +17,18 @@ class TriHurdleFilter:
         self,
         min_sharpe: float = 1.05,
         max_factor_corr: float = 0.12,
-        min_positive_era_ratio: float = 0.65
+        min_positive_era_ratio: float = 0.65,
+        max_vault_corr: float = 0.25
     ):
         assert min_sharpe > 0.0, "min_sharpe must be positive"
-        assert max_factor_corr > 0.0 and max_factor_corr < 1.0, "max_factor_corr must be in (0, 1)"
-        assert min_positive_era_ratio > 0.0 and min_positive_era_ratio <= 1.0, "min_positive_era_ratio must be in (0, 1]"
+        assert 0.0 < max_factor_corr < 1.0, "max_factor_corr must be in (0, 1)"
+        assert 0.0 < min_positive_era_ratio <= 1.0, "min_positive_era_ratio must be in (0, 1]"
+        assert 0.0 < max_vault_corr < 1.0, "max_vault_corr must be in (0, 1)"
         
         self.min_sharpe = min_sharpe
         self.max_factor_corr = max_factor_corr
         self.min_positive_era_ratio = min_positive_era_ratio
+        self.max_vault_corr = max_vault_corr
 
     def evaluate(
         self,
@@ -32,7 +36,8 @@ class TriHurdleFilter:
         target: np.ndarray,
         eras: np.ndarray,
         feature_matrix: np.ndarray,
-        max_features_to_check: int = 150
+        max_features_to_check: int = 150,
+        existing_signals: Optional[List[np.ndarray]] = None
     ) -> HurdleResult:
         assert len(signal) == len(target) == len(eras) == len(feature_matrix), "Input lengths must match"
         assert self.min_sharpe > 0.0, "min_sharpe must be positive"
@@ -62,6 +67,11 @@ class TriHurdleFilter:
             if max_factor_corr > self.max_factor_corr:
                 failures.append(f"Orthogonality failure: max feature correlation {max_factor_corr:.3f} > max {self.max_factor_corr:.3f}")
 
+        if len(failures) == 0 and existing_signals:
+            max_v_corr = self._calc_max_vault_corr(signal, existing_signals)
+            if max_v_corr > self.max_vault_corr:
+                failures.append(f"Orthogonality failure: max vault correlation {max_v_corr:.3f} > max {self.max_vault_corr:.3f}")
+
         passed = (len(failures) == 0)
         return HurdleResult(
             passed=passed,
@@ -71,6 +81,25 @@ class TriHurdleFilter:
             positive_era_ratio=positive_era_ratio,
             failure_reason="; ".join(failures)
         )
+
+    def _calc_max_vault_corr(self, signal: np.ndarray, existing_signals: List[np.ndarray]) -> float:
+        assert signal.ndim == 1, "Signal must be 1D"
+        assert len(existing_signals) > 0, "existing_signals cannot be empty"
+        if np.std(signal) < 1e-7:
+            return 1.0
+
+        max_corr = 0.0
+        for ex_sig in existing_signals:
+            if len(ex_sig) != len(signal) or np.std(ex_sig) < 1e-7:
+                continue
+            c, _ = spearmanr(signal, ex_sig)
+            if not np.isnan(c):
+                c_abs = abs(float(c))
+                if c_abs > max_corr:
+                    max_corr = c_abs
+                if max_corr > self.max_vault_corr:
+                    break
+        return max_corr
 
     def _calc_era_metrics(self, signal: np.ndarray, target: np.ndarray, eras: np.ndarray, unique_eras: np.ndarray):
         assert len(signal) == len(target), "Signal and target lengths must match"

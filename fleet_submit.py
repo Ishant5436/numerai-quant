@@ -26,6 +26,7 @@ from config import (
     FLAGSHIP_ANCHOR_WEIGHT,
     ORTHO_60D_DIR,
     STRATEGY_ANCHOR_WEIGHTS,
+    CHIMERA_VAULT_PATH,
 )
 from neutralize import neutralize, rank_01
 
@@ -456,10 +457,12 @@ def generate_tri_ensemble_prediction(
     allow_mock_fallback: bool = False,
     anchor_weight: float | None = None,
     quintet_raw: np.ndarray | None = None,
+    alpha_blend_weight: float = 0.03,
+    alpha_vault_path: str | None = None,
 ) -> np.ndarray:
     """Dispatch to the first applicable prediction tier (Flagship Quintet ->
     dedicated orthogonal specialist -> legacy tri-ensemble/single-model fallback),
-    then finish with rank -> neutralize -> re-rank."""
+    blend Chimera alpha vault signals, then finish with rank -> neutralize -> re-rank."""
     assert strat_id >= 1, f"strat_id must be positive, got {strat_id}"
     assert len(feature_subset) > 0, f"feature_subset must be non-empty for strategy {strat_id}"
     assert not live_df.empty, "live_df must be non-empty"
@@ -479,6 +482,20 @@ def generate_tri_ensemble_prediction(
     assert len(raw_pred) == len(live_df), (
         f"prediction length {len(raw_pred)} != live_df length {len(live_df)} for strategy {strat_id}"
     )
+
+    if alpha_blend_weight > 0.0:
+        try:
+            from chimera.alpha_vault import AlphaVault
+            vault_file = alpha_vault_path or CHIMERA_VAULT_PATH
+            if os.path.exists(vault_file):
+                vault = AlphaVault.load(vault_file)
+                if len(vault.entries) > 0:
+                    comp_alpha = vault.compute_composite_alpha(live_df, top_k=25, feature_cols=feature_subset)
+                    if comp_alpha is not None and len(comp_alpha) == len(raw_pred):
+                        raw_pred = (1.0 - alpha_blend_weight) * rank_01(raw_pred) + alpha_blend_weight * rank_01(comp_alpha)
+        except Exception:
+            pass
+
     return _finish_prediction(live_df, raw_pred, neut_proportion, neutralizer_feats)
 
 

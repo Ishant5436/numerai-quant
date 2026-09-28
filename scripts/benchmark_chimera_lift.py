@@ -35,8 +35,19 @@ def main():
     base_features = medium_features[:130]
     target_col = "target_cyrusd_60"
 
+    vault = AlphaVault.load(CHIMERA_VAULT_PATH)
+    print(f"[*] Loaded {len(vault.entries)} verified Chimera Alphas from {CHIMERA_VAULT_PATH}")
+    assert len(vault.entries) > 0, "No alphas in vault"
+
+    # Ensure all features needed by vault alphas are loaded alongside base features
+    all_needed_features = set(base_features)
+    for e in vault.entries:
+        if getattr(e, "feature_names", None):
+            all_needed_features.update(e.feature_names)
+    cols_to_load = sorted(list(all_needed_features))
+
     print("[*] Reading validation dataset...")
-    cols = ["era", target_col] + base_features
+    cols = ["era", target_col] + cols_to_load
     df = pd.read_parquet(val_path, columns=cols)
     df = df.dropna(subset=[target_col])
 
@@ -53,11 +64,6 @@ def main():
     print(f"[*] Train set: {len(train_df):,} rows across {len(train_eras)} eras")
     print(f"[*] Test set (Out-of-Sample): {len(test_df):,} rows across {len(test_eras)} eras")
 
-    # 1. Load Chimera Alphas from Vault
-    vault = AlphaVault.load(CHIMERA_VAULT_PATH)
-    print(f"[*] Loaded {len(vault.entries)} verified Chimera Alphas from {CHIMERA_VAULT_PATH}")
-    assert len(vault.entries) > 0, "No alphas in vault"
-
     print("[*] Augmenting feature matrices with C++ SIMD kernel...")
     t0 = time.perf_counter()
     train_df_aug = vault.augment_dataframe(train_df.copy(), feature_cols=base_features)
@@ -65,7 +71,7 @@ def main():
     aug_time = time.perf_counter() - t0
     print(f"[+] Vectorized augmentation complete in {aug_time:.2f}s ({len(train_df_aug) + len(test_df_aug):,} rows)")
 
-    chimera_cols = [e.name for e in vault.entries]
+    chimera_cols = [e.name for e in vault.entries if e.name in test_df_aug.columns]
 
     # LightGBM parameters (fast benchmark)
     params = {
@@ -81,17 +87,25 @@ def main():
     }
 
     # Model A: Baseline (Base Features only)
-    print("\n[*] Training Model A (Baseline: 100 Raw Features)...")
+    print("\n[*] Training Model A (Baseline: Raw Features)...")
     model_a = lgb.LGBMRegressor(**params)
     model_a.fit(train_df[base_features], train_df[target_col])
     test_df["pred_a"] = model_a.predict(test_df[base_features])
 
-    # Model B: Chimera-Augmented (Base Features + 33 Alphas)
+    # Model B: Chimera-Augmented (Base Features + Synthetic Alphas as GBDT columns)
     aug_features = base_features + chimera_cols
-    print(f"[*] Training Model B (Chimera-Augmented: 100 Raw Features + {len(chimera_cols)} Synthetic Alphas)...")
+    print(f"[*] Training Model B (Chimera-Augmented: Raw Features + {len(chimera_cols)} Synthetic Alphas)...")
     model_b = lgb.LGBMRegressor(**params)
     model_b.fit(train_df_aug[aug_features], train_df_aug[target_col])
     test_df["pred_b"] = model_b.predict(test_df_aug[aug_features])
+
+    # Model C: Pillar 4 Top-K Alpha Ensemble Blending (w = 0.03)
+    comp_alpha = vault.compute_composite_alpha(test_df, top_k=25, feature_cols=base_features)
+    if comp_alpha is not None:
+        p_a_rank = pd.Series(test_df["pred_a"]).rank(pct=True).values
+        test_df["pred_c"] = 0.97 * p_a_rank + 0.03 * comp_alpha
+    else:
+        test_df["pred_c"] = test_df["pred_a"]
 
     # Out-of-Sample Per-Era Evaluation
     def calc_era_scores(pred_col):
@@ -104,15 +118,29 @@ def main():
 
     scores_a = calc_era_scores("pred_a")
     scores_b = calc_era_scores("pred_b")
+    scores_c = calc_era_scores("pred_c")
 
-    mean_a, std_a = np.mean(scores_a), np.std(scores_a)
-    mean_b, std_b = np.mean(scores_b), np.std(scores_b)
+    def calc_metrics(scores):
+        m, s = float(np.mean(scores)), float(np.std(scores))
+        sh = float(m / (s + 1e-8))
+        pos = float(np.mean(scores > 0))
+        return m, s, sh, pos
 
-    sharpe_a = mean_a / (std_a + 1e-8)
-    sharpe_b = mean_b / (std_b + 1e-8)
+    ma, sa, sha, pa = calc_metrics(scores_a)
+    mb, sb, shb, pb = calc_metrics(scores_b)
+    mc, sc, shc, pc = calc_metrics(scores_c)
 
-    pos_a = np.mean(scores_a > 0)
-    pos_b = np.mean(scores_b > 0)
+    print("\n" + "="*80)
+    print("                 OUT-OF-SAMPLE BENCHMARK RESULTS (4-PILLAR ARCHITECTURE)        ")
+    print("="*80)
+    print(f"{'Metric':<28} {'Model A (Raw)':<16} {'Model B (Tree Aug)':<18} {'Model C (Pillar 4 Blend)'}")
+    print("-" * 80)
+    print(f"{'Mean Era Correlation (CORR)':<28} {ma:+.4f}           {mb:+.4f}             {mc:+.4f}")
+    print(f"{'Era Std Dev (Volatility)':<28} {sa:.4f}            {sb:.4f}              {sc:.4f}")
+    print(f"{'Raw Per-Era Sharpe (mu/sigma)':<28} {sha:+.3f}           {shb:+.3f}             {shc:+.3f}")
+    print(f"{'Annualized Sharpe (x sqrt12)':<28} {sha*np.sqrt(12):+.3f}           {shb*np.sqrt(12):+.3f}             {shc*np.sqrt(12):+.3f}")
+    print(f"{'Positive Era Ratio':<28} {pa:.1%}            {pb:.1%}              {pc:.1%}")
+    print("="*80)
 
     # Feature importances of Model B
     importances = model_b.feature_importances_
@@ -120,27 +148,15 @@ def main():
     feat_imp = feat_imp.sort_values(by="importance", ascending=False).reset_index(drop=True)
     top_chimera_imp = feat_imp[feat_imp["feature"].isin(chimera_cols)].head(5)
 
-    print("\n" + "="*65)
-    print("                 OUT-OF-SAMPLE BENCHMARK RESULTS                ")
-    print("="*65)
-    print(" Metric                     Model A (Raw)    Model B (+Chimera)    Lift")
-    print("-----------------------------------------------------------------")
-    print(f" Mean Era Correlation (CORR)   {mean_a:+.4f}           {mean_b:+.4f}        {mean_b - mean_a:+.4f}")
-    print(f" Era Std Dev (Volatility)      {std_a:.4f}            {std_b:.4f}        {std_b - std_a:+.4f}")
-    print(f" Raw Per-Era Sharpe (mu/sigma) {sharpe_a:+.3f}           {sharpe_b:+.3f}        {sharpe_b - sharpe_a:+.3f}")
-    print(f" Annualized Sharpe (x sqrt12)  {sharpe_a*np.sqrt(12):+.3f}           {sharpe_b*np.sqrt(12):+.3f}        {(sharpe_b - sharpe_a)*np.sqrt(12):+.3f}")
-    print(f" Positive Era Ratio            {pos_a:.1%}            {pos_b:.1%}        {pos_b - pos_a:+.1%}")
-    print("="*65)
-
     print("\nTop Mined Chimera Alphas by Model Feature Importance:")
     for idx, row in top_chimera_imp.iterrows():
         rank = feat_imp[feat_imp["feature"] == row["feature"]].index[0] + 1
         print(f"  Rank #{rank:2d}: {row['feature']:<18} | Split Gain: {row['importance']:.1f}")
 
-    if sharpe_b > sharpe_a:
-        pct_lift = ((sharpe_b - sharpe_a) / max(0.001, abs(sharpe_a))) * 100
+    if shb > sha:
+        pct_lift = ((shb - sha) / max(0.001, abs(sha))) * 100
         print(f"\n[+] Empirical Result: Chimera Alphas delivered a +{pct_lift:.1f}% increase in Out-of-Sample Sharpe!")
-    print("="*65)
+    print("="*80)
 
 if __name__ == "__main__":
     main()

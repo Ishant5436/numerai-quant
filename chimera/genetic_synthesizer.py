@@ -1,8 +1,9 @@
 import random
 import numpy as np
+import pandas as pd
 from typing import List, Optional
 from chimera.ast_generator import ASTGenerator, Node
-from chimera.evaluator import ChimeraEngine
+from chimera.evaluator import ChimeraEngine, ChimeraInstruction
 from chimera.orthogonality_filter import TriHurdleFilter
 from chimera.alpha_vault import AlphaVault, AlphaEntry
 
@@ -75,7 +76,9 @@ class GeneticSynthesizer:
         features: np.ndarray,
         target: np.ndarray,
         eras: np.ndarray,
-        gen_idx: int
+        gen_idx: int,
+        feature_names: Optional[List[str]] = None,
+        existing_signals: Optional[List[np.ndarray]] = None
     ) -> List[float]:
         assert len(population) == self.pop_size, "Population size mismatch"
         assert len(features) == len(target) == len(eras), "Data lengths must match"
@@ -88,23 +91,39 @@ class GeneticSynthesizer:
             cand_instrs = cand.compile_to_bytecode()
             sig = engine.execute(cand_instrs, features)
             
-            hurdle_res = self.filter_gate.evaluate(sig, target, eras, features)
+            hurdle_res = self.filter_gate.evaluate(
+                sig, target, eras, features, existing_signals=existing_signals
+            )
             if hurdle_res.passed:
-                formula_str = cand.to_formula()
+                used_indices = sorted(list(set(cand.get_feature_indices())))
+                if feature_names and all(i < len(feature_names) for i in used_indices):
+                    bound_names = [str(feature_names[i]) for i in used_indices]
+                    idx_map = {old_i: new_i for new_i, old_i in enumerate(used_indices)}
+                    remapped_cand = cand.remap_features(idx_map)
+                    formula_str = cand.to_formula(feature_names=feature_names)
+                    final_instrs = remapped_cand.compile_to_bytecode()
+                else:
+                    bound_names = []
+                    formula_str = cand.to_formula()
+                    final_instrs = cand_instrs
+
                 if any(e.formula == formula_str for e in self.vault.entries):
                     continue
                 entry_idx = len(self.vault.entries) + 1
                 alpha_entry = AlphaEntry(
                     name=f"chimera_alpha_{entry_idx:02d}",
                     formula=formula_str,
-                    instructions=[(i.op, i.out_reg, i.in_reg1, i.in_reg2, i.feat_idx, i.imm_val) for i in cand_instrs],
+                    instructions=[(i.op, i.out_reg, i.in_reg1, i.in_reg2, i.feat_idx, i.imm_val) for i in final_instrs],
                     sharpe=hurdle_res.sharpe,
                     mean_corr=hurdle_res.mean_corr,
                     max_factor_corr=hurdle_res.max_factor_corr,
-                    positive_era_ratio=hurdle_res.positive_era_ratio
+                    positive_era_ratio=hurdle_res.positive_era_ratio,
+                    feature_names=bound_names
                 )
                 self.vault.add_entry(alpha_entry)
                 self.vault.save()
+                if existing_signals is not None:
+                    existing_signals.append(sig)
                 print(f"[*] Discovery [Gen {gen_idx}]: {alpha_entry.name} -> {alpha_entry.formula} (Sharpe={hurdle_res.sharpe:.3f}, Corr={hurdle_res.mean_corr:.4f})")
                 
         return fitness_scores
@@ -145,7 +164,8 @@ class GeneticSynthesizer:
         features: np.ndarray,
         target: np.ndarray,
         eras: np.ndarray,
-        generations: int = 5
+        generations: int = 5,
+        feature_names: Optional[List[str]] = None
     ) -> AlphaVault:
         assert len(features) == len(target) == len(eras), "Data lengths must match"
         assert generations > 0, "generations must be > 0"
@@ -153,13 +173,32 @@ class GeneticSynthesizer:
         target = np.ascontiguousarray(target, dtype=np.float32)
         n_rows = len(features)
         engine = ChimeraEngine(capacity_rows=max(1000, n_rows))
-        
+
+        existing_signals: List[np.ndarray] = []
+        if len(self.vault.entries) > 0 and feature_names:
+            try:
+                temp_df = pd.DataFrame(features, columns=feature_names)
+                for entry in self.vault.entries:
+                    if getattr(entry, "feature_names", None):
+                        missing = [c for c in entry.feature_names if c not in temp_df.columns]
+                        if not missing:
+                            sub_feats = np.ascontiguousarray(temp_df[entry.feature_names].values, dtype=np.float32)
+                            c_ins = [
+                                ChimeraInstruction(
+                                    op=i[0], out_reg=i[1], in_reg1=i[2], in_reg2=i[3], feat_idx=i[4], imm_val=i[5]
+                                ) for i in entry.instructions
+                            ]
+                            existing_signals.append(engine.execute(c_ins, sub_feats))
+            except Exception:
+                pass
+
         population: List[Node] = [self.gen.random_tree() for _ in range(self.pop_size)]
 
         try:
             for gen_idx in range(generations):
                 fitness_scores = self._evaluate_population_and_harvest(
-                    population, engine, features, target, eras, gen_idx
+                    population, engine, features, target, eras, gen_idx,
+                    feature_names=feature_names, existing_signals=existing_signals
                 )
                 population = self._produce_next_generation(population, fitness_scores)
         finally:

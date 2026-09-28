@@ -66,3 +66,28 @@ def test_tri_hurdle_rejects_fluke_stability():
     result = filter_gate.evaluate(signal, target, eras, feature_matrix)
 
     assert not result.passed
+
+def test_tri_hurdle_rejects_vault_collinear_signal():
+    np.random.seed(42)
+    n_eras = 20
+    rows_per_era = 100
+    total_rows = n_eras * rows_per_era
+    eras = np.repeat([f"era_{i:03d}" for i in range(n_eras)], rows_per_era)
+
+    # Base features
+    f0 = np.random.randn(total_rows).astype(np.float32)
+    feature_matrix = f0.reshape(-1, 1)
+
+    # High quality target
+    target = np.random.randn(total_rows).astype(np.float32)
+    # Existing vault signal with good performance
+    existing_alpha = target + 0.2 * np.random.randn(total_rows).astype(np.float32)
+    # Candidate signal that is almost identical to existing_alpha (rho ~ 0.90)
+    candidate_signal = existing_alpha + 0.05 * np.random.randn(total_rows).astype(np.float32)
+
+    filter_gate = TriHurdleFilter(min_sharpe=0.5, max_factor_corr=0.50, min_positive_era_ratio=0.50, max_vault_corr=0.25)
+    result = filter_gate.evaluate(candidate_signal, target, eras, feature_matrix, existing_signals=[existing_alpha])
+
+    assert not result.passed
+    assert "vault correlation" in result.failure_reason.lower()
+

@@ -141,3 +141,50 @@ def test_fleet_orthogonality_with_tiered_anchoring():
     assert n_eff >= 3.20, f"Effective bets N_eff {n_eff:.2f} fell below threshold 3.20"
     upper_corrs = corr_matrix[np.triu_indices(25, k=1)]
     assert np.max(upper_corrs) < 0.85, f"Pairwise correlation exceeded 0.85: max={np.max(upper_corrs):.4f}"
+
+def test_alpha_ensemble_blending_in_prediction(tmp_path):
+    """Verify that Chimera alpha vault signals blend safely into fleet predictions."""
+    from chimera.alpha_vault import AlphaVault, AlphaEntry
+    from chimera.ast_generator import ASTGenerator
+
+    groups = load_feature_groups()
+    feats = groups["all_medium"][:10]
+    n_assets = 100
+    rng = np.random.default_rng(seed=789)
+    dummy_df = pd.DataFrame(rng.uniform(0.0, 1.0, (n_assets, len(feats))), columns=feats)
+    fncv3 = groups["fncv3_features"][:10]
+
+    # Create temporary vault with an alpha
+    vault_file = str(tmp_path / "test_alpha_vault.json")
+    vault = AlphaVault(vault_path=vault_file)
+    gen = ASTGenerator(num_features=2, max_depth=2)
+    tree = gen.random_tree()
+    entry = AlphaEntry(
+        name="chimera_blend_test",
+        formula=tree.to_formula(),
+        instructions=[(i.op, i.out_reg, i.in_reg1, i.in_reg2, i.feat_idx, i.imm_val) for i in tree.compile_to_bytecode()],
+        sharpe=1.2,
+        mean_corr=0.03,
+        max_factor_corr=0.05,
+        positive_era_ratio=0.7,
+        feature_names=[feats[0], feats[1]]
+    )
+    vault.add_entry(entry)
+    vault.save()
+
+    preds_unblended = generate_tri_ensemble_prediction(
+        dummy_df, strat_id=1, feature_subset=feats, neut_proportion=0.20,
+        neutralizer_feats=fncv3, allow_mock_fallback=True, alpha_blend_weight=0.0
+    )
+    preds_blended = generate_tri_ensemble_prediction(
+        dummy_df, strat_id=1, feature_subset=feats, neut_proportion=0.20,
+        neutralizer_feats=fncv3, allow_mock_fallback=True, alpha_blend_weight=0.10,
+        alpha_vault_path=vault_file
+    )
+
+    assert len(preds_blended) == n_assets
+    assert not np.isnan(preds_blended).any()
+    assert np.all(preds_blended >= 0.0) and np.all(preds_blended <= 1.0)
+    # The blended prediction should differ slightly from unblended
+    assert not np.allclose(preds_unblended, preds_blended, atol=1e-5)
+

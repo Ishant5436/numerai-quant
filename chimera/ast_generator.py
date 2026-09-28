@@ -39,10 +39,13 @@ class Node:
     def depth(self) -> int:
         raise NotImplementedError
 
-    def to_formula(self) -> str:
+    def to_formula(self, feature_names: Optional[List[str]] = None) -> str:
         raise NotImplementedError
 
-    def emit(self, ib: InstructionBuilder, reg_alloc: List[int]) -> int:
+    def remap_features(self, mapping: dict) -> "Node":
+        raise NotImplementedError
+
+    def emit(self, ib: InstructionBuilder, free_regs: List[int]) -> int:
         raise NotImplementedError
 
     def clone(self) -> "Node":
@@ -64,8 +67,14 @@ class FeatureNode(Node):
     def depth(self) -> int:
         return 1
 
-    def to_formula(self) -> str:
+    def to_formula(self, feature_names: Optional[List[str]] = None) -> str:
+        if feature_names is not None and self.feat_idx < len(feature_names):
+            return str(feature_names[self.feat_idx])
         return f"feat_{self.feat_idx}"
+
+    def remap_features(self, mapping: dict) -> "FeatureNode":
+        new_idx = mapping.get(self.feat_idx, self.feat_idx)
+        return FeatureNode(new_idx)
 
     def emit(self, ib: InstructionBuilder, free_regs: List[int]) -> int:
         reg = free_regs.pop(0)
@@ -85,8 +94,11 @@ class ImmNode(Node):
     def depth(self) -> int:
         return 1
 
-    def to_formula(self) -> str:
+    def to_formula(self, feature_names: Optional[List[str]] = None) -> str:
         return f"{self.val:.2f}"
+
+    def remap_features(self, mapping: dict) -> "ImmNode":
+        return ImmNode(self.val)
 
     def emit(self, ib: InstructionBuilder, free_regs: List[int]) -> int:
         reg = free_regs.pop(0)
@@ -107,9 +119,12 @@ class UnaryNode(Node):
     def depth(self) -> int:
         return 1 + self.child.depth()
 
-    def to_formula(self) -> str:
+    def to_formula(self, feature_names: Optional[List[str]] = None) -> str:
         name = OP_NAMES.get(self.op, "unary")
-        return f"{name}({self.child.to_formula()})"
+        return f"{name}({self.child.to_formula(feature_names)})"
+
+    def remap_features(self, mapping: dict) -> "UnaryNode":
+        return UnaryNode(self.op, self.child.remap_features(mapping))
 
     def emit(self, ib: InstructionBuilder, free_regs: List[int]) -> int:
         child_reg = self.child.emit(ib, free_regs)
@@ -144,9 +159,12 @@ class BinaryNode(Node):
     def depth(self) -> int:
         return 1 + max(self.left.depth(), self.right.depth())
 
-    def to_formula(self) -> str:
+    def to_formula(self, feature_names: Optional[List[str]] = None) -> str:
         name = OP_NAMES.get(self.op, "binary")
-        return f"{name}({self.left.to_formula()}, {self.right.to_formula()})"
+        return f"{name}({self.left.to_formula(feature_names)}, {self.right.to_formula(feature_names)})"
+
+    def remap_features(self, mapping: dict) -> "BinaryNode":
+        return BinaryNode(self.op, self.left.remap_features(mapping), self.right.remap_features(mapping))
 
     def emit(self, ib: InstructionBuilder, free_regs: List[int]) -> int:
         r_left = self.left.emit(ib, free_regs)
