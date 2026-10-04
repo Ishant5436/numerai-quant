@@ -104,6 +104,7 @@ class NumerbayManager:
                 "currency": "NMR",
                 "mode": "file",
                 "is_active": True,
+                "is_on_platform": True,
             }]
         }
         try:
