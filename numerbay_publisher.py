@@ -146,3 +146,65 @@ class NumerbayPublisher:
             }
         except Exception as err:
             return {"status": "QUERY_ERROR", "error": str(err)}
+
+
+def find_latest_prediction_file(data_dir: str, model_name: str) -> Optional[str]:
+    """Finds the most recent prediction CSV file for a given model."""
+    assert isinstance(data_dir, str) and len(data_dir) > 0, "Invalid data_dir"
+    assert isinstance(model_name, str) and len(model_name) > 0, "Invalid model_name"
+
+    if not os.path.exists(data_dir):
+        return None
+
+    prefix = f"predictions_{model_name}_round_"
+    candidates = []
+    for fname in os.listdir(data_dir):
+        if fname.startswith(prefix) and fname.endswith(".csv"):
+            candidates.append(os.path.join(data_dir, fname))
+
+    if not candidates:
+        return None
+    candidates.sort(key=os.path.getmtime, reverse=True)
+    return candidates[0]
+
+
+def syndicate_primary_models(
+    base_dir: str, models: Optional[List[str]] = None
+) -> Dict[str, Any]:
+    """Syndicates top model predictions to Numerbay marketplace."""
+    assert isinstance(base_dir, str) and len(base_dir) > 0, "Invalid base_dir"
+    assert models is None or isinstance(models, list), "Models must be a list or None"
+
+    target_models = models if models is not None else [
+        "cypherpole", "cypherpole_vel", "cypherpole_hedged"
+    ]
+    data_dir = os.path.join(base_dir, "data")
+    publisher = NumerbayPublisher()
+
+    if not publisher.is_configured:
+        print("[INFO] Numerbay credentials unconfigured. Skipping syndication.")
+        return {"status": "SKIPPED_UNCONFIGURED", "published": []}
+
+    results = []
+    for model_name in target_models:
+        pred_file = find_latest_prediction_file(data_dir, model_name)
+        if pred_file and os.path.exists(pred_file):
+            print(f"[INFO] Syndicating {model_name} from {pred_file} to Numerbay...")
+            res = publisher.publish_predictions(model_name, pred_file)
+            results.append({"model": model_name, "result": res})
+        else:
+            print(f"[WARN] No predictions found for model {model_name} in {data_dir}")
+
+    return {"status": "COMPLETED", "published": results}
+
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("Numerbay Autonomous Prediction Syndication Bridge")
+    print("=" * 60)
+    summary = syndicate_primary_models(BASE_DIR)
+    print(f"Syndication Result: {summary['status']}")
+    if summary.get("published"):
+        for item in summary["published"]:
+            print(f" - {item['model']}: {item['result'].get('status')}")
+

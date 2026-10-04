@@ -46,6 +46,9 @@ for attempt in $(seq 1 $MAX_RETRIES); do
         echo "[OK] [$(date '+%Y-%m-%d %H:%M:%S')] Fleet submission completed successfully!" >> "$LOG_FILE"
         SUCCESS=true
         osascript -e 'display notification "Numerai weekly fleet predictions submitted successfully!" with title "Numerai Quant Autopilot" sound name "Glass"' 2>/dev/null || true
+
+        echo "[RUN] [$(date '+%Y-%m-%d %H:%M:%S')] Executing Numerbay Prediction Syndication..." >> "$LOG_FILE"
+        $PYTHON_BIN "$SCRIPT_DIR/numerbay_publisher.py" >> "$LOG_FILE" 2>&1 || true
         break
     else
         echo "[WARN] [$(date '+%Y-%m-%d %H:%M:%S')] Attempt $attempt failed. Waiting $RETRY_DELAY seconds..." >> "$LOG_FILE"

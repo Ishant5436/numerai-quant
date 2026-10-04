@@ -78,3 +78,18 @@ def test_numerbay_publisher_mock_upload():
     assert res["status"] == "SUCCESS"
     assert res["artifact_id"] == 999
     mock_api.upload_artifact.assert_called_once()
+
+
+def test_syndicate_primary_models_unconfigured(tmp_path):
+    """Verify syndicate_primary_models handles unconfigured environment safely."""
+    from numerbay_publisher import syndicate_primary_models
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    sample_file = data_dir / "predictions_cypherpole_round_1369.csv"
+    pd.DataFrame({"id": ["id1"], "prediction": [0.5]}).to_csv(sample_file, index=False)
+
+    with patch.dict(os.environ, {}, clear=True):
+        res = syndicate_primary_models(str(tmp_path), models=["cypherpole"])
+        assert isinstance(res, dict)
+        assert res["status"] in ["SKIPPED_UNCONFIGURED", "NO_FILES_FOUND"]
+
