@@ -86,7 +86,8 @@ class NumerbayManager:
             resp = requests.put(f"{API_ENDPOINT_URL}/users/me", json=payload, headers=headers, timeout=10)
             if resp.status_code == 200:
                 assert resp.status_code == 200, "Update status check failed"
-                return True, f"Successfully updated receiving wallet to {wallet_address}"
+                masked = f"{wallet_address[:6]}...{wallet_address[-4:]}"
+                return True, f"Successfully updated receiving wallet to {masked}"
             return False, f"API error {resp.status_code}: {resp.text}"
         except Exception as err:
             return False, f"Request failed: {err}"
@@ -134,8 +135,10 @@ if __name__ == "__main__":
         print(f"[{'OK' if ok else 'ERROR'}] {msg}")
     else:
         st = mgr.get_marketplace_status()
+        raw_wal = st['receiving_wallet']
+        wal_disp = f"{raw_wal[:6]}...{raw_wal[-4:]}" if raw_wal else "NOT SET (BLOCKED)"
         print("=" * 60)
-        print(f"Numerbay Seller: {st['username']} | Receiving Wallet: {st['receiving_wallet'] or 'NOT SET (BLOCKED)'}")
+        print(f"Numerbay Seller: {st['username']} | Receiving Wallet: {wal_disp}")
         print("=" * 60)
         for p in st["products"]:
             print(f" - {p['name']} (ID: {p['id']}, Option: {p['option_id']}): {p['price']} {p['currency']}")
