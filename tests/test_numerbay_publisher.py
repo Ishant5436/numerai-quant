@@ -93,3 +93,57 @@ def test_syndicate_primary_models_unconfigured(tmp_path):
         assert isinstance(res, dict)
         assert res["status"] in ["SKIPPED_UNCONFIGURED", "NO_FILES_FOUND"]
 
+
+def test_publish_predictions_passes_explicit_product_id(tmp_path):
+    """Verify publisher passes exact integer product_id to upload_artifact."""
+    from numerbay_publisher import MODEL_PRODUCT_ID_MAP
+    mock_api = MagicMock()
+    mock_api.upload_artifact.return_value = {"id": 1234, "status": "uploaded"}
+
+    pub = NumerbayPublisher(username="testuser", password="testpassword")
+    pub.api = mock_api
+    pub.is_configured = True
+
+    df = pd.DataFrame({"id": ["id_1"], "prediction": [0.75]})
+    csv_file = tmp_path / "test_preds.csv"
+    df.to_csv(csv_file, index=False)
+
+    res = pub.publish_predictions("cypherpole", str(csv_file))
+    assert res["status"] == "SUCCESS"
+    assert mock_api.upload_artifact.call_count == 1
+    call_kwargs = mock_api.upload_artifact.call_args.kwargs
+    assert call_kwargs.get("product_id") == 1216
+    assert call_kwargs.get("product_full_name") == "numerai-predictions-cypherpole"
+
+
+def test_find_latest_prediction_file_with_target_round(tmp_path):
+    """Verify target_round selector matches explicit round file."""
+    from numerbay_publisher import find_latest_prediction_file
+    round_1372 = tmp_path / "predictions_cypherpole_round_1372.csv"
+    round_1373 = tmp_path / "predictions_cypherpole_round_1373.csv"
+    
+    pd.DataFrame({"id": ["1"], "prediction": [0.5]}).to_csv(round_1372, index=False)
+    pd.DataFrame({"id": ["1"], "prediction": [0.6]}).to_csv(round_1373, index=False)
+
+    match_1373 = find_latest_prediction_file(str(tmp_path), "cypherpole", target_round=1373)
+    match_1372 = find_latest_prediction_file(str(tmp_path), "cypherpole", target_round=1372)
+    match_none = find_latest_prediction_file(str(tmp_path), "cypherpole", target_round=9999)
+
+    assert match_1373 == str(round_1373)
+    assert match_1372 == str(round_1372)
+    assert match_none is None
+
+
+def test_model_product_id_map_invariants():
+    """Verify MODEL_PRODUCT_ID_MAP integrity and known IDs."""
+    from numerbay_publisher import MODEL_PRODUCT_ID_MAP
+    assert isinstance(MODEL_PRODUCT_ID_MAP, dict)
+    assert len(MODEL_PRODUCT_ID_MAP) >= 3
+    for model_name, p_id in MODEL_PRODUCT_ID_MAP.items():
+        assert isinstance(model_name, str) and len(model_name) > 0
+        assert isinstance(p_id, int) and p_id > 0
+    assert MODEL_PRODUCT_ID_MAP["cypherpole"] == 1216
+    assert MODEL_PRODUCT_ID_MAP["cypherpole_hedged"] == 1215
+    assert MODEL_PRODUCT_ID_MAP["cypherpole_vel"] == 1219
+
+

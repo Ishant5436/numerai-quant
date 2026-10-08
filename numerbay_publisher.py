@@ -13,6 +13,13 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.expanduser("~/.env"))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
+MODEL_PRODUCT_ID_MAP: Dict[str, int] = {
+    "cypherpole": 1216,
+    "cypherpole_hedged": 1215,
+    "cypherpole_vel": 1219,
+}
+
+
 
 def validate_prediction_dataframe(df: pd.DataFrame) -> Tuple[bool, str]:
     """Validates DataFrame columns, bounds, and absence of NaNs."""
@@ -99,9 +106,12 @@ class NumerbayPublisher:
 
         try:
             target_sku = f"numerai-predictions-{model_name.lower()}"
-            res = self.api.upload_artifact(df=df, product_full_name=target_sku)
+            p_id = MODEL_PRODUCT_ID_MAP.get(model_name.lower())
+            res = self.api.upload_artifact(
+                df=df, product_id=p_id, product_full_name=target_sku
+            )
             artifact_id = res.get("id") if isinstance(res, dict) else None
-            return {"status": "SUCCESS", "artifact_id": artifact_id, "sku": target_sku}
+            return {"status": "SUCCESS", "artifact_id": artifact_id, "sku": target_sku, "product_id": p_id}
         except Exception as err:
             return {"status": "UPLOAD_FAILED", "error": str(err)}
 
@@ -122,9 +132,12 @@ class NumerbayPublisher:
 
         try:
             target_sku = f"numerai-predictions-{model_name.lower()}"
-            res = self.api.upload_artifact(file_path=file_path, product_full_name=target_sku)
+            p_id = MODEL_PRODUCT_ID_MAP.get(model_name.lower())
+            res = self.api.upload_artifact(
+                file_path=file_path, product_id=p_id, product_full_name=target_sku
+            )
             artifact_id = res.get("id") if isinstance(res, dict) else None
-            return {"status": "SUCCESS", "artifact_id": artifact_id, "sku": target_sku}
+            return {"status": "SUCCESS", "artifact_id": artifact_id, "sku": target_sku, "product_id": p_id}
         except Exception as err:
             return {"status": "UPLOAD_FAILED", "error": str(err)}
 
@@ -203,13 +216,20 @@ class NumerbayPublisher:
         return results
 
 
-def find_latest_prediction_file(data_dir: str, model_name: str) -> Optional[str]:
-    """Finds the most recent prediction CSV file for a given model."""
+def find_latest_prediction_file(
+    data_dir: str, model_name: str, target_round: Optional[int] = None
+) -> Optional[str]:
+    """Finds the most recent prediction CSV file for a given model, optionally matching target_round."""
     assert isinstance(data_dir, str) and len(data_dir) > 0, "Invalid data_dir"
     assert isinstance(model_name, str) and len(model_name) > 0, "Invalid model_name"
+    assert target_round is None or (isinstance(target_round, int) and target_round > 0), "Invalid target_round"
 
     if not os.path.exists(data_dir):
         return None
+
+    if target_round is not None:
+        exact_path = os.path.join(data_dir, f"predictions_{model_name}_round_{target_round}.csv")
+        return exact_path if os.path.exists(exact_path) else None
 
     prefix = f"predictions_{model_name}_round_"
     candidates = []
@@ -224,11 +244,14 @@ def find_latest_prediction_file(data_dir: str, model_name: str) -> Optional[str]
 
 
 def syndicate_primary_models(
-    base_dir: str, models: Optional[List[str]] = None
+    base_dir: str,
+    models: Optional[List[str]] = None,
+    target_round: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Syndicates top model predictions to Numerbay marketplace."""
     assert isinstance(base_dir, str) and len(base_dir) > 0, "Invalid base_dir"
     assert models is None or isinstance(models, list), "Models must be a list or None"
+    assert target_round is None or (isinstance(target_round, int) and target_round > 0), "Invalid target_round"
 
     target_models = models if models is not None else [
         "cypherpole", "cypherpole_vel", "cypherpole_hedged"
@@ -242,7 +265,7 @@ def syndicate_primary_models(
 
     results = []
     for model_name in target_models:
-        pred_file = find_latest_prediction_file(data_dir, model_name)
+        pred_file = find_latest_prediction_file(data_dir, model_name, target_round=target_round)
         if pred_file and os.path.exists(pred_file):
             print(f"[INFO] Syndicating {model_name} from {pred_file} to Numerbay...")
             res = publisher.publish_predictions(model_name, pred_file)
