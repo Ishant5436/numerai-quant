@@ -6743,6 +6743,146 @@
         "feature_glazed_hirundine_amuck",
         "feature_enceinte_awry_zincograph"
       ]
+    },
+    {
+      "name": "chimera_alpha_68",
+      "formula": "safe_div(sub(min(feature_toltec_korean_disfavourer, feature_monitory_divisionary_neurasthenic), safe_div(feature_frozen_tellurian_pentameter, feature_spluttering_unconvertible_callosity)), sub(max(feature_bavarian_educible_fetishism, feature_louche_clausal_sori), mul(feature_chaste_disqualifying_intermodulation, feature_approbatory_labroid_coracle)))",
+      "instructions": [
+        [
+          1,
+          0,
+          0,
+          0,
+          3,
+          0.0
+        ],
+        [
+          1,
+          1,
+          0,
+          0,
+          1,
+          0.0
+        ],
+        [
+          8,
+          0,
+          0,
+          1,
+          0,
+          0.0
+        ],
+        [
+          1,
+          1,
+          0,
+          0,
+          5,
+          0.0
+        ],
+        [
+          1,
+          2,
+          0,
+          0,
+          2,
+          0.0
+        ],
+        [
+          6,
+          1,
+          1,
+          2,
+          0,
+          0.0
+        ],
+        [
+          4,
+          0,
+          0,
+          1,
+          0,
+          0.0
+        ],
+        [
+          1,
+          1,
+          0,
+          0,
+          4,
+          0.0
+        ],
+        [
+          1,
+          2,
+          0,
+          0,
+          6,
+          0.0
+        ],
+        [
+          7,
+          1,
+          1,
+          2,
+          0,
+          0.0
+        ],
+        [
+          1,
+          2,
+          0,
+          0,
+          7,
+          0.0
+        ],
+        [
+          1,
+          3,
+          0,
+          0,
+          0,
+          0.0
+        ],
+        [
+          5,
+          2,
+          2,
+          3,
+          0,
+          0.0
+        ],
+        [
+          4,
+          1,
+          1,
+          2,
+          0,
+          0.0
+        ],
+        [
+          6,
+          0,
+          0,
+          1,
+          0,
+          0.0
+        ]
+      ],
+      "sharpe": 0.6824104268902939,
+      "mean_corr": 0.009470338819170797,
+      "max_factor_corr": 0.1572200986416494,
+      "positive_era_ratio": 0.6666666666666666,
+      "feature_names": [
+        "feature_approbatory_labroid_coracle",
+        "feature_monitory_divisionary_neurasthenic",
+        "feature_spluttering_unconvertible_callosity",
+        "feature_toltec_korean_disfavourer",
+        "feature_bavarian_educible_fetishism",
+        "feature_frozen_tellurian_pentameter",
+        "feature_louche_clausal_sori",
+        "feature_chaste_disqualifying_intermodulation"
+      ]
     }
   ]
 }
