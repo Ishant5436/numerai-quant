@@ -147,6 +147,61 @@ class NumerbayPublisher:
         except Exception as err:
             return {"status": "QUERY_ERROR", "error": str(err)}
 
+    def sync_optimal_listing_prices(
+        self, models: Optional[List[Dict[str, Any]]] = None, dry_run: bool = False
+    ) -> List[Dict[str, Any]]:
+        """Synchronizes ODE optimal pricing recommendations with live Numerbay listings."""
+        assert isinstance(dry_run, bool), "dry_run must be boolean"
+        assert models is None or isinstance(models, list), "models must be list or None"
+
+        from scripts.optimal_pricing_ode import compute_model_pricing_recommendations
+        import requests
+        from numerbay import API_ENDPOINT_URL
+
+        target_models = models if models is not None else [
+            {"name": "cypherpole", "corj60": 0.0607, "id": 1216},
+            {"name": "cypherpole_hedged", "corj60": 0.0450, "id": 1215},
+            {"name": "cypherpole_vel", "corj60": 0.0380, "id": 1219},
+        ]
+        recs = compute_model_pricing_recommendations(target_models)
+        results = []
+
+        for r, m in zip(recs, target_models):
+            p_id = m.get("id")
+            if dry_run or not self.is_configured or self.api is None or not p_id:
+                results.append({"model": r["name"], "status": "DRY_RUN", "recommendation": r})
+                continue
+
+            headers = {"Authorization": f"Bearer {self.api.token}"}
+            payload = {
+                "is_active": True,
+                "options": [
+                    {
+                        "is_on_platform": True,
+                        "description": "Monthly Subscription (4 consecutive weekly tournament rounds)",
+                        "quantity": 4,
+                        "price": r["subscription_4_round_nmr"],
+                        "currency": "NMR",
+                        "mode": "file",
+                        "is_active": True,
+                    },
+                    {
+                        "is_on_platform": True,
+                        "description": "Single Round Trial (1 weekly tournament round)",
+                        "quantity": 1,
+                        "price": r["trial_1_round_nmr"],
+                        "currency": "NMR",
+                        "mode": "file",
+                        "is_active": True,
+                    },
+                ],
+            }
+            res = requests.put(f"{API_ENDPOINT_URL}/products/{p_id}", json=payload, headers=headers)
+            results.append({"model": r["name"], "status": "UPDATED" if res.status_code == 200 else "ERROR", "code": res.status_code})
+
+        assert len(results) == len(target_models), "Results count must match target models"
+        return results
+
 
 def find_latest_prediction_file(data_dir: str, model_name: str) -> Optional[str]:
     """Finds the most recent prediction CSV file for a given model."""
