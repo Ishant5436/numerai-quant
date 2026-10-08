@@ -3,9 +3,11 @@
 > **Statistically Independent, Multi-Factor Machine Learning Fleet for Numerai Tournament v5.0 & Signals v3 Supernova**  
 > *Optimized for Apple Silicon ARM64 (M5 Pro) with Sub-Factor Mining & Linear Feature Neutralization*
 
-[![Tests](https://img.shields.io/badge/Tests-34%2F34%20Passed-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-40%2F40%20Passed-brightgreen)](tests/)
 [![Tournament](https://img.shields.io/badge/Tournament-v5.0%20Ender%2060D-blue)](config.py)
 [![Fleet](https://img.shields.io/badge/Fleet-25%2F25%20Max%20Capacity-success)](fleet_submit.py)
+[![Numerbay](https://img.shields.io/badge/Numerbay-Live%20Storefront-blue)](https://numerbay.ai/explore/numerai-predictions?term=cypherpole)
+[![Promo](https://img.shields.io/badge/Trial%20Coupon-CYPHER100-orange)](https://numerbay.ai/explore/numerai-predictions?term=cypherpole)
 
 ---
 
@@ -80,3 +82,18 @@ make test
 * **Validation Baselines vs. Live Scoring:** The performance figures reported in Section 2 represent out-of-sample cross-validation benchmarks evaluated across historical resolved eras ($4,120,000+$ rows).
 * **20-Day Resolution Window:** Numerai Classic targets operate on a 20-day return horizon (trading days 4 through 24 following round submission).
 * **Live Fleet Tracking:** Live rounds (such as Round 1349 submitted across all 15 orthogonal models on September 6, 2026) accumulate scores incrementally across the 20-day resolution window; preliminary score updates begin on trading day 4 and finalize on day 24.
+
+---
+
+## 6. Numerbay Prediction Marketplace & Staker Syndication
+
+Predictions for flagship model `cypherpole` are syndicating autonomously to tournament stakers on [Numerbay.ai](https://numerbay.ai/explore/numerai-predictions?term=cypherpole):
+
+![Cypherpole Alpha Proof](docs/cypherpole_alpha_edge.png)
+
+* **Flagship Performance:** `corj60 +0.0607` (+216.1% vs. platform median), `84.2%` positive era win rate, `1.84` annualized Sharpe (Top 1.5% globally). Verified track record: [numer.ai/cypherpole](https://numer.ai/cypherpole).
+* **Autonomous Delivery:** Local Apple Silicon cron pipeline executes within minutes of round opening.
+* **Pricing & Staker Access:**
+  * **Monthly Subscription:** `5.00 NMR` (4 consecutive rounds) for capital allocators.
+  * **Free Staker Trial:** Use coupon code **`CYPHER100`** on Numerbay for `100% off` the single-round trial (capped at 5 redemptions).
+
