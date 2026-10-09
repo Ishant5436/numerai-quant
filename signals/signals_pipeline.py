@@ -10,6 +10,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Optional
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
@@ -161,7 +162,12 @@ def upload_single_model_with_retry(
     return f"ERROR:{last_err}"
 
 
-def upload_fleet_submissions(formatted_dict: dict[str, pd.DataFrame], dry_run: bool = False) -> dict[str, str]:
+def upload_fleet_submissions(
+    formatted_dict: dict[str, pd.DataFrame],
+    dry_run: bool = False,
+    sapi_client: Optional[Any] = None,
+    sapi_instance: Optional[Any] = None,
+) -> dict[str, str]:
     """
     Saves submission CSVs and uploads to Numerai Signals API with retry guards.
     """
@@ -178,8 +184,8 @@ def upload_fleet_submissions(formatted_dict: dict[str, pd.DataFrame], dry_run: b
     if "$" in auth and not (pub_id and sec_key):
         pub_id, sec_key = auth.split("$", 1)
 
-    sapi = None
-    if not dry_run and pub_id and sec_key:
+    sapi = sapi_client if sapi_client is not None else sapi_instance
+    if sapi is None and not dry_run and pub_id and sec_key:
         from numerapi import SignalsAPI
         sapi = SignalsAPI(public_id=pub_id, secret_key=sec_key)
 
@@ -209,8 +215,12 @@ def upload_fleet_submissions(formatted_dict: dict[str, pd.DataFrame], dry_run: b
 
     assert len(results) > 0, "No model results processed"
     failed_models = [m for m, r in results.items() if r.startswith("ERROR:")]
+    unverified = [m for m, r in results.items() if "not verified" in r.lower()]
     if failed_models and not dry_run:
-        raise RuntimeError(f"Signals upload failed for {len(failed_models)} models: {failed_models}")
+        if len(unverified) == len(failed_models):
+            print(f"[WARN] Signals upload skipped: Account verification required for {failed_models}. Continuing.")
+        else:
+            raise RuntimeError(f"Signals upload failed for {len(failed_models)} models: {failed_models}")
     return results
 
 

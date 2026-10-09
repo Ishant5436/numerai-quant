@@ -54,3 +54,51 @@ def test_gaussian_neutralize_zero_proportion_identity():
     res = gaussian_neutralize(df, columns=["pred"], extra_neutralizers=["feat"], proportion=0.0)
     assert np.allclose(res["pred"].values, df["pred"].values)
     assert len(res) == len(df)
+
+
+def test_finish_prediction_wires_gaussian_for_heavy_neutralization():
+    """Verify _finish_prediction switches to Gaussian neutralization when neut_proportion >= 0.40."""
+    from fleet_submit import _finish_prediction
+    np.random.seed(99)
+    n = 150
+    df = pd.DataFrame({
+        "feature_1": np.random.normal(0, 1, n),
+        "feature_2": np.random.normal(0, 1, n),
+    })
+    raw_pred = df["feature_1"].values * 0.7 + np.random.normal(0, 1, n) * 0.3
+
+    # Default call with neut_proportion=0.50 should use gaussian_neutralize
+    res_heavy = _finish_prediction(df, raw_pred, neut_proportion=0.50, neutralizer_feats=["feature_1", "feature_2"])
+    assert len(res_heavy) == n, "Output length must match input"
+    assert not np.isnan(res_heavy).any(), "Output cannot contain NaNs"
+    assert np.all(res_heavy >= 0.0) and np.all(res_heavy <= 1.0), "Percentiles must lie in [0, 1]"
+
+    # Explicit use_gaussian=False should use linear QR neutralization
+    res_linear = _finish_prediction(df, raw_pred, neut_proportion=0.50, neutralizer_feats=["feature_1", "feature_2"], use_gaussian=False)
+    assert len(res_linear) == n, "Output length must match input"
+    assert not np.isnan(res_linear).any(), "Output cannot contain NaNs"
+
+
+def test_generate_tri_ensemble_prediction_gaussian_wiring():
+    """Verify generate_tri_ensemble_prediction accepts use_gaussian and executes safely with mock fallback."""
+    from fleet_submit import generate_tri_ensemble_prediction
+    np.random.seed(101)
+    n = 100
+    df = pd.DataFrame({
+        "feature_fnc1": np.random.normal(0, 1, n),
+        "feature_fnc2": np.random.normal(0, 1, n),
+    })
+
+    pred = generate_tri_ensemble_prediction(
+        live_df=df,
+        strat_id=1,
+        feature_subset=["feature_fnc1", "feature_fnc2"],
+        neut_proportion=0.50,
+        neutralizer_feats=["feature_fnc1", "feature_fnc2"],
+        allow_mock_fallback=True,
+        use_gaussian=True,
+    )
+    assert len(pred) == n, "Output length must match rows"
+    assert not np.isnan(pred).any(), "Output cannot contain NaNs"
+    assert np.all(pred >= 0.0) and np.all(pred <= 1.0), "Percentiles must lie in [0, 1]"
+

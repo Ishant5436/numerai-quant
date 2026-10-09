@@ -248,3 +248,24 @@ def test_downside_volatility_asymmetry_convexity():
     assert factors_convex["downside_volatility_asymmetry"] > 0.0
     assert factors_panic["downside_volatility_asymmetry"] < 0.0
 
+
+def test_upload_fleet_submissions_graceful_on_unverified(monkeypatch):
+    """Verify that if all models fail due to unverified user, it logs warning and does not crash."""
+    from signals.signals_pipeline import upload_fleet_submissions
+    fake_formatted = {"cypherpole_sig": pd.DataFrame({"numerai_ticker": ["AAPL"], "signal": [0.5]})}
+
+    monkeypatch.setattr(
+        "signals.signals_pipeline.upload_single_model_with_retry",
+        lambda sapi, path, mid, mname: "ERROR:User not verified"
+    )
+
+    # Calling with sapi=Mock should not raise RuntimeError when all errors are 'User not verified'
+    class FakeSapi:
+        pass
+
+    monkeypatch.setattr("signals.signals_pipeline.SIGNALS_MODELS", {"cypherpole_sig": {"id": "fake_id"}})
+    res = upload_fleet_submissions(fake_formatted, dry_run=False, sapi_instance=FakeSapi())
+    assert "cypherpole_sig" in res
+    assert "ERROR:User not verified" in res["cypherpole_sig"]
+
+

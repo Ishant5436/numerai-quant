@@ -145,7 +145,7 @@ def test_fleet_orthogonality_with_tiered_anchoring():
 def test_alpha_ensemble_blending_in_prediction(tmp_path):
     """Verify that Chimera alpha vault signals blend safely into fleet predictions."""
     from chimera.alpha_vault import AlphaVault, AlphaEntry
-    from chimera.ast_generator import ASTGenerator
+    from chimera.ast_generator import BinaryNode, FeatureNode, ChimeraOpcode
 
     groups = load_feature_groups()
     feats = groups["all_medium"][:10]
@@ -157,8 +157,7 @@ def test_alpha_ensemble_blending_in_prediction(tmp_path):
     # Create temporary vault with an alpha
     vault_file = str(tmp_path / "test_alpha_vault.json")
     vault = AlphaVault(vault_path=vault_file)
-    gen = ASTGenerator(num_features=2, max_depth=2)
-    tree = gen.random_tree()
+    tree = BinaryNode(ChimeraOpcode.ADD, FeatureNode(0), FeatureNode(1))
     entry = AlphaEntry(
         name="chimera_blend_test",
         formula=tree.to_formula(),

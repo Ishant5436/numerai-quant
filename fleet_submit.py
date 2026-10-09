@@ -28,7 +28,7 @@ from config import (
     STRATEGY_ANCHOR_WEIGHTS,
     CHIMERA_VAULT_PATH,
 )
-from neutralize import neutralize, rank_01
+from neutralize import neutralize, gaussian_neutralize, rank_01
 
 load_dotenv(os.path.expanduser("~/.env"))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -309,15 +309,29 @@ def get_flagship_quintet_raw_prediction(live_df: pd.DataFrame, feature_subset: l
 
 
 def _finish_prediction(
-    live_df: pd.DataFrame, raw_pred: np.ndarray, neut_proportion: float, neutralizer_feats: list
+    live_df: pd.DataFrame,
+    raw_pred: np.ndarray,
+    neut_proportion: float,
+    neutralizer_feats: list,
+    use_gaussian: bool | None = None,
 ) -> np.ndarray:
     """Shared final stage for every prediction tier: rank, neutralize, re-rank."""
     assert len(raw_pred) == len(live_df), "raw_pred length must match live_df length"
     assert 0.0 <= neut_proportion <= 1.0, f"neut_proportion must be in [0,1], got {neut_proportion}"
 
+    if use_gaussian is None:
+        use_gaussian = neut_proportion >= 0.40
+
     live_copy = live_df.copy()
     live_copy["pred"] = rank_01(raw_pred)
-    live_copy = neutralize(live_copy, ["pred"], extra_neutralizers=neutralizer_feats, proportion=neut_proportion)
+    if use_gaussian:
+        live_copy = gaussian_neutralize(
+            live_copy, ["pred"], extra_neutralizers=neutralizer_feats, proportion=neut_proportion
+        )
+    else:
+        live_copy = neutralize(
+            live_copy, ["pred"], extra_neutralizers=neutralizer_feats, proportion=neut_proportion
+        )
     result = rank_01(live_copy["pred"].values)
     assert len(result) == len(live_df), "finished prediction length must match live_df length"
     return result
@@ -459,6 +473,7 @@ def generate_tri_ensemble_prediction(
     quintet_raw: np.ndarray | None = None,
     alpha_blend_weight: float = 0.03,
     alpha_vault_path: str | None = None,
+    use_gaussian: bool | None = None,
 ) -> np.ndarray:
     """Dispatch to the first applicable prediction tier (Flagship Quintet ->
     dedicated orthogonal specialist -> legacy tri-ensemble/single-model fallback),
@@ -496,7 +511,7 @@ def generate_tri_ensemble_prediction(
         except Exception:
             pass
 
-    return _finish_prediction(live_df, raw_pred, neut_proportion, neutralizer_feats)
+    return _finish_prediction(live_df, raw_pred, neut_proportion, neutralizer_feats, use_gaussian=use_gaussian)
 
 
 def _init_session() -> tuple[NumerAPI, int, dict]:
