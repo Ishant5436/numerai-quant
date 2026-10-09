@@ -11,6 +11,7 @@ from scipy.stats import rankdata
 
 def rank_01(series_or_array) -> np.ndarray:
     """Normalize array strictly to uniform distribution [0.0, 1.0] with NaN safety."""
+    assert series_or_array is not None, "Input cannot be None"
     arr = np.asarray(series_or_array, dtype=np.float64)
     result = np.full_like(arr, 0.5)  # NaN entries get neutral midpoint
     valid = ~np.isnan(arr)
@@ -18,6 +19,7 @@ def rank_01(series_or_array) -> np.ndarray:
     if n_valid > 0:
         ranks = rankdata(arr[valid], method="average")
         result[valid] = (ranks - 0.5) / n_valid
+    assert len(result) == len(arr), "Output length invariant violated"
     return result
 
 
@@ -32,6 +34,9 @@ def neutralize(
     Projects prediction vectors away from the subspace spanned by risk factor matrix X.
     Invariant: For orthonormal Q (from X = QR), Projection = Q @ (Q.T @ P), O(N*K) time, 0 matrix inversion instability.
     """
+    assert isinstance(df, pd.DataFrame), "df must be a pandas DataFrame"
+    assert isinstance(columns, list) and len(columns) > 0, "columns must be a non-empty list"
+
     if proportion <= 0.0:
         return df
 
@@ -64,4 +69,56 @@ def neutralize(
             df_neutralized[col] = rank_01(df[col].values)
 
     return df_neutralized
+
+
+def gaussian_neutralize(
+    df: pd.DataFrame,
+    columns: list,
+    extra_neutralizers: list = None,
+    proportion: float = 0.25,
+) -> pd.DataFrame:
+    """
+    Gaussian Rank-Normal (Probit) Feature Neutralization.
+    Transforms percentiles to standard normal Z = Phi^-1(P), projects in Gaussian space
+    away from orthonormal feature basis Q, and projects back via rank uniform mapping.
+    Prevents tail compression artifacts and maximizes out-of-sample FNCv3.
+    """
+    assert isinstance(df, pd.DataFrame), "Input must be a pandas DataFrame"
+    assert proportion >= 0.0, "Proportion must be non-negative"
+
+    if proportion <= 0.0:
+        return df
+
+    available_cols = set(df.columns)
+    neutralizers = (
+        [c for c in extra_neutralizers if c in available_cols]
+        if extra_neutralizers is not None
+        else []
+    )
+    neutralizers_matrix = df[neutralizers].values if neutralizers else None
+    df_neutralized = df.copy()
+
+    if neutralizers_matrix is not None and neutralizers_matrix.shape[1] > 0:
+        from scipy.stats import norm
+
+        X = np.nan_to_num(neutralizers_matrix, nan=0.5)
+        X_ranks = np.zeros_like(X, dtype=np.float64)
+        for i in range(X.shape[1]):
+            u = np.clip(rank_01(X[:, i]), 1e-4, 1.0 - 1e-4)
+            X_ranks[:, i] = norm.ppf(u)
+
+        Q, _ = np.linalg.qr(X_ranks, mode="reduced")
+
+        for col in columns:
+            u_p = np.clip(rank_01(df[col].values), 1e-4, 1.0 - 1e-4)
+            Z = norm.ppf(u_p)
+            proj = Q @ (Q.T @ Z)
+            Z_neut = Z - proportion * proj
+            df_neutralized[col] = rank_01(norm.cdf(Z_neut))
+    else:
+        for col in columns:
+            df_neutralized[col] = rank_01(df[col].values)
+
+    return df_neutralized
+
 

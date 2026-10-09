@@ -72,6 +72,33 @@ def detect_new_orders(
     return new_orders
 
 
+def dispatch_discord_webhook(
+    order: Dict[str, Any], webhook_url: Optional[str] = None
+) -> bool:
+    """Dispatches webhook notification to Discord for real-time sales telemetry."""
+    assert isinstance(order, dict), "order must be a dictionary"
+    url = webhook_url if webhook_url is not None else os.environ.get("DISCORD_WEBHOOK_URL", "")
+    assert isinstance(url, str), "webhook_url must be string"
+
+    if not url.startswith("https://discord.com/api/webhooks/"):
+        return False
+
+    price = order.get("price", 0.0)
+    currency = order.get("currency", "NMR")
+    prod = order.get("product", {})
+    name = prod.get("name", "cypherpole") if isinstance(prod, dict) else "cypherpole"
+
+    payload = {
+        "content": f"🚀 **Numerbay Order Received!** Staker purchased `{name}` for **{price} {currency}**."
+    }
+    try:
+        res = requests.post(url, json=payload, timeout=5)
+        return res.status_code in [200, 204]
+    except Exception as err:
+        print(f"[WARN] Discord webhook alert failed: {err}")
+        return False
+
+
 def dispatch_sale_alert(
     order: Dict[str, Any], enable_system_notify: bool = True
 ) -> bool:
@@ -86,6 +113,8 @@ def dispatch_sale_alert(
 
     msg = f"New sale: {model_name} for {price} {currency}!"
     print(f"[SALE EVENT] {msg}")
+
+    dispatch_discord_webhook(order)
 
     if enable_system_notify:
         apple_script = (

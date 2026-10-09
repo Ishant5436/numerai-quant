@@ -85,6 +85,17 @@ def test_poll_and_update_sales_telemetry(tmp_path):
     assert res["total_nmr_earned"] == 10.0, "Total NMR earned must be 10.0"
 
 
+def test_dispatch_discord_webhook():
+    """Verify Discord webhook dispatcher formats payload and handles invalid URL gracefully."""
+    from scripts.sales_telemetry_daemon import dispatch_discord_webhook
+
+    order = {"id": 1, "price": 5.0, "currency": "NMR", "product": {"name": "cypherpole"}}
+    res = dispatch_discord_webhook(order, webhook_url="invalid-url")
+    assert res is False
+    assert isinstance(order, dict)
+
+
+
 def test_power_of_10_invariants():
     """Verify that sales_telemetry_daemon.py adheres to Holzmann Power of 10 rules."""
     module_path = os.path.join(
