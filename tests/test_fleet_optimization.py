@@ -187,3 +187,29 @@ def test_alpha_ensemble_blending_in_prediction(tmp_path):
     # The blended prediction should differ slightly from unblended
     assert not np.allclose(preds_unblended, preds_blended, atol=1e-5)
 
+
+def test_resolve_alpha_blend_weight():
+    """Verify calibrated alpha blend weights across fleet strategy tiers with Power of 10 bounds."""
+    from fleet_submit import resolve_alpha_blend_weight
+
+    # High conviction alpha models have elevated weighting (0.06 - 0.08)
+    assert resolve_alpha_blend_weight(11) == 0.08
+    assert resolve_alpha_blend_weight(18) == 0.07
+    assert resolve_alpha_blend_weight(25) == 0.06
+    assert resolve_alpha_blend_weight(30) == 0.08
+    assert resolve_alpha_blend_weight(20) == 0.06
+    assert resolve_alpha_blend_weight(21) == 0.06
+
+    # Core models have moderate baseline weighting (0.035)
+    assert resolve_alpha_blend_weight(1) == 0.035
+    assert resolve_alpha_blend_weight(2) == 0.035
+
+    # Defensive models have conservative weighting (0.02)
+    assert resolve_alpha_blend_weight(15) == 0.02
+    assert resolve_alpha_blend_weight(4) == 0.02
+
+    # Invariant: all 30 strategies must fall within bounded risk range [0.01, 0.10]
+    for s_id in range(1, 31):
+        w = resolve_alpha_blend_weight(s_id)
+        assert 0.01 <= w <= 0.10, f"Strategy {s_id} weight {w} out of bounds"
+

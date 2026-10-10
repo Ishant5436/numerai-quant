@@ -272,6 +272,46 @@ def resolve_strategy_config(model_name: str, idx: int) -> tuple[int, str, float]
     return result
 
 
+# Strategy-calibrated alpha blend weights for non-linear genetic Chimera alphas.
+# High conviction alpha models blend 6-8%, core models blend 3.5%, defensive models blend 2.0%.
+_STRATEGY_ALPHA_WEIGHTS: dict[int, float] = {
+    # Tier 1: High-conviction alpha / residual / momentum / supernova models
+    11: 0.08,  # alpha_conviction
+    18: 0.07,  # residual_alpha
+    20: 0.06,  # factor_momentum
+    21: 0.06,  # high_sharpe_quality
+    25: 0.06,  # vol_adjusted_alpha
+    30: 0.08,  # supernova
+    # Tier 2: Defensive / hedged / risk-parity models (conservative alpha exposure)
+    4: 0.02,   # macro
+    5: 0.02,   # constitution
+    7: 0.02,   # quality_defensive
+    10: 0.02,  # macro_tail
+    12: 0.02,  # volatility_defensive
+    13: 0.02,  # risk_parity
+    15: 0.02,  # macro_hedged
+    17: 0.02,  # low_beta_defensive
+    19: 0.02,  # mean_reversion
+    22: 0.02,  # macro_tail_liquidity
+    24: 0.02,  # sentiment_divergence
+    26: 0.02,  # orthogonal_risk_parity
+    27: 0.02,  # residual_spread
+}
+
+
+def resolve_alpha_blend_weight(strat_id: int) -> float:
+    """
+    Deterministically resolves the Chimera alpha blend weight for a given fleet strategy ID.
+    Enforces Holzmann's Power of 10 Safety Invariants: length <= 60 lines, assertions >= 2.
+    """
+    assert isinstance(strat_id, int), f"strat_id must be an integer, got {type(strat_id)}"
+    assert 1 <= strat_id <= 30, f"strat_id must be in range [1, 30], got {strat_id}"
+
+    weight = _STRATEGY_ALPHA_WEIGHTS.get(strat_id, 0.035)
+    assert 0.01 <= weight <= 0.10, f"calibrated weight {weight} out of bounds for strategy {strat_id}"
+    return float(weight)
+
+
 def get_flagship_quintet_raw_prediction(live_df: pd.DataFrame, feature_subset: list = None) -> np.ndarray | None:
     """Compute raw ensemble predictions from 5-target 60-day Flagship models."""
     assert not live_df.empty, "live_df must be non-empty"
@@ -508,8 +548,9 @@ def generate_tri_ensemble_prediction(
                     comp_alpha = vault.compute_composite_alpha(live_df, top_k=25, feature_cols=feature_subset)
                     if comp_alpha is not None and len(comp_alpha) == len(raw_pred):
                         raw_pred = (1.0 - alpha_blend_weight) * rank_01(raw_pred) + alpha_blend_weight * rank_01(comp_alpha)
-        except Exception:
-            pass
+                        print(f"[{strat_id}] Blended Chimera composite alpha ({len(vault.entries)} vault alphas, top_k=25, weight={alpha_blend_weight*100:.1f}%)")
+        except Exception as e:
+            print(f"[WARN] Failed to blend Chimera alpha for strategy {strat_id}: {e}")
 
     return _finish_prediction(live_df, raw_pred, neut_proportion, neutralizer_feats, use_gaussian=use_gaussian)
 
@@ -651,10 +692,20 @@ def _submit_one_model(
     """Generate, save, and upload one model's predictions. Returns the submission ID; raises on any failure."""
     preds_path = os.path.join(DATA_DIR, f"predictions_{model_name}_round_{current_round}.csv")
     strat_id, group_key, neut_prop = resolve_strategy_config(model_name, idx)
-    print(f"Applying Strategy {strat_id} ('{group_key}', {len(groups[group_key])} features, {neut_prop*100:.0f}% Neutralized)...")
+    alpha_blend_weight = resolve_alpha_blend_weight(strat_id)
+    print(
+        f"Applying Strategy {strat_id} ('{group_key}', {len(groups[group_key])} features, "
+        f"{neut_prop*100:.0f}% Neutralized, {alpha_blend_weight*100:.1f}% Alpha Blend)..."
+    )
 
     preds = generate_tri_ensemble_prediction(
-        live_df, strat_id, groups[group_key], neut_prop, neutralizer_feats, quintet_raw=quintet_raw
+        live_df,
+        strat_id,
+        groups[group_key],
+        neut_prop,
+        neutralizer_feats,
+        quintet_raw=quintet_raw,
+        alpha_blend_weight=alpha_blend_weight,
     )
     assert len(preds) == len(live_df), f"prediction count mismatch for '{model_name}'"
 
