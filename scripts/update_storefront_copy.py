@@ -45,15 +45,6 @@ def build_storefront_payload(
     options = [
         {
             "is_on_platform": True,
-            "description": "Monthly Subscription (4 consecutive weekly tournament rounds)",
-            "quantity": 4,
-            "price": monthly_price,
-            "currency": "NMR",
-            "mode": "file",
-            "is_active": True,
-        },
-        {
-            "is_on_platform": True,
             "description": "Single Round Trial (1 weekly round — use coupon code CYPHER100 for 100% off)",
             "quantity": 1,
             "price": trial_price,
@@ -61,9 +52,18 @@ def build_storefront_payload(
             "mode": "file",
             "is_active": True,
         },
+        {
+            "is_on_platform": True,
+            "description": "Monthly Subscription (4 consecutive weekly tournament rounds)",
+            "quantity": 4,
+            "price": monthly_price,
+            "currency": "NMR",
+            "mode": "file",
+            "is_active": True,
+        },
     ]
     assert len(options) == 2, "Options array must contain exactly 2 tiers"
-    return {"description": desc, "is_active": True, "options": options}
+    return {"description": desc, "is_active": True, "is_daily": True, "options": options}
 
 
 def push_storefront_update(
