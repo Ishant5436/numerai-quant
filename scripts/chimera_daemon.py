@@ -11,6 +11,8 @@ import json
 import signal
 import logging
 import argparse
+import gc
+import resource
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
@@ -93,6 +95,12 @@ def run_daemon_mining_cycle(cycle_id: int):
         features_matrix, target_vector, eras_vector, generations=5, feature_names=selected_features
     )
     logging.info(f"Cycle {cycle_id} complete. Vault contains {len(vault.entries)} verified alphas.")
+    
+    # Deterministic memory cleanup: release parquet DataFrames and contiguous numpy buffers
+    del df, sample_df, features_matrix, target_vector, eras_vector
+    gc.collect()
+    rss_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1024 * 1024)
+    logging.info(f"Cycle {cycle_id} memory footprint: {rss_mb:.1f} MB RSS (cleaned)")
 
 def main():
     parser = argparse.ArgumentParser()
