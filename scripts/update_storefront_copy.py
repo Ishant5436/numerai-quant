@@ -94,9 +94,9 @@ def update_all_storefront_listings(dry_run: bool = False) -> List[Dict[str, Any]
 
     pub = NumerbayPublisher()
     targets = [
-        {"name": "cypherpole", "id": 1216, "monthly": 5.0, "trial": 1.5},
-        {"name": "cypherpole_hedged", "id": 1215, "monthly": 3.5, "trial": 1.0},
-        {"name": "cypherpole_vel", "id": 1219, "monthly": 2.0, "trial": 1.0},
+        {"name": "cypherpole", "id": 1216, "monthly": 0.70, "trial": 0.20},
+        {"name": "cypherpole_hedged", "id": 1215, "monthly": 0.70, "trial": 0.20},
+        {"name": "cypherpole_vel", "id": 1219, "monthly": 0.70, "trial": 0.20},
     ]
     results = []
     for t in targets:
