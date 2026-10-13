@@ -5,6 +5,9 @@ Deterministic Safety-Critical Standards: Bounded loops, assertions, <=60 line fu
 import os
 import ast
 import pytest
+
+pytest.importorskip("matplotlib")
+
 from scripts.update_storefront_copy import build_storefront_payload
 from scripts.generate_sales_assets import generate_comparative_alpha_chart
 

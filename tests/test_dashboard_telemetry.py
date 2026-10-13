@@ -5,6 +5,9 @@ Validates storefront telemetry loading, round scheduling, and Power of 10 invari
 import os
 import json
 import pytest
+
+pytest.importorskip("starlette")
+
 from dashboard import (
     load_storefront_telemetry,
     compute_round_schedule,
