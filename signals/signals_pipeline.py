@@ -185,9 +185,12 @@ def upload_fleet_submissions(
         pub_id, sec_key = auth.split("$", 1)
 
     sapi = sapi_client if sapi_client is not None else sapi_instance
-    if sapi is None and not dry_run and pub_id and sec_key:
+    if sapi is None and not dry_run:
         from numerapi import SignalsAPI
-        sapi = SignalsAPI(public_id=pub_id, secret_key=sec_key)
+        if pub_id and sec_key:
+            sapi = SignalsAPI(public_id=pub_id, secret_key=sec_key)
+        else:
+            sapi = SignalsAPI()
 
     results = {}
     model_keys = list(SIGNALS_MODELS.keys())
