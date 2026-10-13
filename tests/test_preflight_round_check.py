@@ -16,16 +16,27 @@ from scripts.preflight_round_check import (
 )
 
 
-def test_check_model_checkpoints_exist():
+def test_check_model_checkpoints_exist(tmp_path):
     """Verify that all core flagship model files are verified by Gate 3."""
-    res = check_model_checkpoints()
+    # Test with mock models in tmp_path to ensure deterministic behavior across both CI and local envs
+    models_dir = tmp_path / "models"
+    ens_dir = models_dir / "ensemble_60d"
+    ortho_dir = models_dir / "orthogonal_fleet_60d"
+    ens_dir.mkdir(parents=True)
+    ortho_dir.mkdir(parents=True)
+    for fname in ["lgb_target_agnes_60.pkl", "lgb_target_cyrusd_60.pkl", "lgb_target_jeremy_60.pkl", "lgb_target_victor_60.pkl", "lgb_target_xerxes_60.pkl"]:
+        (ens_dir / fname).write_bytes(b"0" * 150_000)
+    for fname in ["lgb_strat_8.pkl", "lgb_strat_15.pkl"]:
+        (ortho_dir / fname).write_bytes(b"0" * 150_000)
+
+    res = check_model_checkpoints(base_dir=str(tmp_path))
     assert isinstance(res, dict)
-    assert res["status"] in ["PASS", "FAIL"]
+    assert res["status"] == "PASS"
     assert "checked_models" in res
     assert len(res["checked_models"]) >= 5
     for m in res["checked_models"]:
         assert m["exists"] is True
-        assert m["size_bytes"] > 500_000
+        assert m["size_bytes"] > 100_000
 
 
 def test_check_feature_manifest():

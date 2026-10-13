@@ -45,7 +45,7 @@ def test_get_marketplace_status_mocked():
         "default_receiving_wallet_address": "0x71C84941916321287cE1772F2fB1E97C475a8984",
     }
 
-    with patch.object(mgr.publisher.api, "get_my_listings", return_value=mock_listings):
+    with patch.object(mgr.publisher, "get_listings", return_value=mock_listings):
         with patch("requests.get", return_value=mock_user_resp):
             status = mgr.get_marketplace_status()
             assert isinstance(status, dict)

@@ -25,7 +25,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="$SCRIPT_DIR/logs"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/sales_telemetry.log"
-PYTHON_BIN="$SCRIPT_DIR/venv/bin/python"
+if [ -x "$SCRIPT_DIR/venv/bin/python" ]; then
+    PYTHON_BIN="$SCRIPT_DIR/venv/bin/python"
+elif [ -n "${VIRTUAL_ENV:-}" ] && [ -x "$VIRTUAL_ENV/bin/python" ]; then
+    PYTHON_BIN="$VIRTUAL_ENV/bin/python"
+else
+    PYTHON_BIN="$(command -v python3 || command -v python)"
+fi
 DAEMON_SCRIPT="$SCRIPT_DIR/scripts/sales_telemetry_daemon.py"
 
 cd "$SCRIPT_DIR"
